@@ -1,8 +1,65 @@
 ---
-title: "M3-miniproject"
+title: "M3-project"
 date: "24 nov 2019"
-output: html_document
+output:
+  html_document:
+    code_folding: hide
+    df_print: paged
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
 ---
+# Introduction
+
+# Problem
+
+# Data desciption
+
+# Multiple input model
+
+## Data
+
+We start by cleaning the environment.
+
+```{r, include=FALSE}
+#Cleaning the environment
+rm(list=ls())
+```
+
+And then we'll import Keras, which is essential for the anaysis. You have to use "install_keras" if you're installing Keras for the first time.
+
+```{r}
+devtools::install_github("rstudio/keras", force = TRUE)
+library(keras)
+#install_keras()
+```
+
+And then we'll load a bunch of other packages.
+
+```{r}
+#Loading packages
+if (!require("pacman")) install.packages("pacman") 
+:)
+pacman::p_load(knitr,
+               readr,
+               rmarkdown, 
+               tidyverse,
+               dplyr,
+               broom,
+               keras,
+               drat,
+               reticulate
+               )
+```
+
+And now we can download the data from the Github.
+
+```{r}
+data = read_csv('https://github.com/emanhamed/Houses-dataset')
+
+```
 
 
-Project
+
