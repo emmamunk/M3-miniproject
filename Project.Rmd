@@ -59,5 +59,8 @@ And now we can download the data from the Github.
 data = read_csv("https://github.com/emanhamed/Houses-dataset")
 ```
 
+```{r}
+data <- read_csv("C:/Users/Michael Thomsen/Desktop/Houses-dataset-master/Houses Dataset")
+```
 
 ff
