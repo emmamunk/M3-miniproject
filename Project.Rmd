@@ -112,4 +112,21 @@ normalize()
 ## Preprocess of images
 
 
+```{r}
+base_path <- file.path(images, fsep = .Platform$path.sep)
+house_path <- sort(base_path)
+
+#options(max.print = 2200)
+#table(images)
+table(house_path)
+as.
+house_path %>% as.numeric(house_path)
+```
+
+
+```{r}
+input_images <- (images)
+output_images <- np_array(house_path,dtype = "float32",order = "F")
+np_a
+```
 
