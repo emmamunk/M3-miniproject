@@ -60,7 +60,8 @@ data = read_csv("https://github.com/emanhamed/Houses-dataset")
 ```
 
 ```{r}
-files <- list.files(path = "C:/Users/Michael Thomsen/Desktop/Houses-dataset-master/Houses Dataset", pattern = "*.jpg", full.names=TRUE)
+files <- list.files(path = "C:/Users/Michael Thomsen/Desktop/Houses-dataset-master/Houses Dataset", 
+                    pattern = "*.jpg", full.names=TRUE)
 all_im <- lapply(files,FUN = simplify )
 ```
 
