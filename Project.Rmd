@@ -73,3 +73,13 @@ files <- list.files(path = "C:/Users/Emma/OneDrive/Universitetet/Houses-dataset-
 images <- lapply(files,FUN = simplify )
 house_info <- read_table2("C:/Users/Emma/OneDrive/Universitetet/Houses-dataset-master/Houses-dataset-master/Houses-dataset/HousesInfo.txt")
 ```
+
+## Preprocess of numeric 
+
+
+
+
+## Preprocess of images
+
+
+
