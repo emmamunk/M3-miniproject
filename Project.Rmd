@@ -96,7 +96,7 @@ table(house_info$Zipcode)
 Here we can see that some zipcodes only are represented by 1 or 2 houses while other have up to 100 houses. 
 
 ```{r}
-index = createDataPartition(house_info, p=0.75)
+index = createDataPartition(house_info, p=0.75, list=TRUE)
 
 training = house_info[index,]
 test = house_info[-index,]
