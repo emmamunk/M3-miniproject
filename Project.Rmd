@@ -65,6 +65,7 @@ And now we can download the data from the Github.
 ```{r}
 listings <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/listings.csv")
 reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/reviews_detailed.csv")
+
 ```
 
 ```{r}
@@ -78,31 +79,21 @@ reviews = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb
 In the variable listings, there's a lof of variables. We have choosen some of them, including id, neighbourhood, room type, minimum nights, number of reviews, reviews per month, calculated host listings count and availability 365.
 
 ```{r}
-listings = listings %>% select(c(price, zipcode, room_type, accommodates, bathrooms, bedrooms, beds, number_of_reviews, guests_included, review_scores_rating)) %>% filter(room_type %in% c("Entire home/apt", "Private room"))
+
+listings = listings %>% select(c(price, neighbourhood, room_type, property_type, accommodates, bathrooms, bedrooms, beds, bed_type, number_of_reviews, guests_included, review_scores_rating))
 ```
 
-
-```{r}
-listings$price = as.numeric(gsub('[$,]', '', listings$price))
-```
-
-```{r}
-listings$price = log(listings$price)
-```
-
-
-```{r}
-listings$zipcode = as.numeric(gsub('[ ]', '', listings$zipcode))
-```
-
-```{r}
-listings$room_type = ifelse(listings$room_type == "Entire home/apt", 1, 0)
-```
 
 And then we'll remove NA's.
 
 ```{r}
 listings = na.omit(listings)
+```
+
+After removing NA's, we're down to 6273 observationsa and eight variables. Now, we'll remove every listing, where availability is equal to zero. 
+
+```{r}
+listings$price = as.numeric(gsub('[$,]', '', listings$price))
 ```
 
 ```{r}
@@ -167,12 +158,32 @@ fit_lm
 ```
 
 ```{r}
-pred_lm <- fit_lm %>% predict() 
-pred_lm %>% head()
+tune_glmnet = expand.grid(alpha = seq(0, 1, length = 5), lambda = seq(0, 1, length = 5))
+tune_glmnet
 ```
 
+```{r}
+fit_glmnet <- train(x = x_train, 
+                    y = y_train, 
+                    trControl = ctrl, 
+                    method = "glmnet", family = "gaussian", 
+                    tuneGrid = tune_glmnet)
+```
 
+```{r}
+fit_glmnet
+```
+```{r}
+pred_lm = predict(fit_lm, newdata = x_test) 
+pred_glmnet <- predict(fit_glmnet, newdata = x_test) 
 
+# RMSE OLS
+sqrt(mean( (y_test - predict(fit_lm, newdata = x_test) ) ^ 2))
+```
+
+```{r}
+sqrt(mean( (y_test - predict(fit_glmnet, newdata = x_test) ) ^ 2))
+```
 
 
 
@@ -218,9 +229,11 @@ glimpse(reviews)
 
 Tokenize and cleaning
 ```{r}
+pacman::p_load(textstem)
 reviews_tidy <- reviews %>% 
   unnest_tokens(word, comments) %>% 
-  count(id, word, sort = TRUE)
+  count(id, word, sort = TRUE) 
+
 
 reviews_tidy <- reviews_tidy %>% 
   anti_join(stop_words)
