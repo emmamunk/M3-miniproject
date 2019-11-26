@@ -59,10 +59,16 @@ And now we can download the data from the Github.
 
 ```{r}
 calendar <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/calendar.csv")
-listings <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/listenings.csv")
+listings <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/listings.csv")
 neighbourhoods <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/neighbourhoods.csv")
-reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/reviews.csv")
+reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/reviews_details.csv")
 
+calendar %>% 
+  rename(id = listing_id)
+reviews %>% 
+  rename(id = listing_id)
+
+data <- merge(calendar, listings, reviews, by = "id")
 ```
 
 
