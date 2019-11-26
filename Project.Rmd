@@ -45,6 +45,7 @@ pacman::p_load(knitr,
                readr,
                rmarkdown, 
                tidyverse,
+               tidytext,
                dplyr,
                broom,
                keras,
@@ -230,7 +231,7 @@ Tokenize and cleaning
 ```{r}
 reviews_tidy <- reviews %>% 
   unnest_tokens(word, comments) %>% 
-  count(listing_id, word, sort = TRUE)
+  count(id, word, sort = TRUE)
 
 reviews_tidy <- reviews_tidy %>% 
   anti_join(stop_words)
@@ -285,8 +286,7 @@ reviews_tidy %>%
 ```
 
 ```{r}
-reviews_word <- reviews %>% 
-  unnest_tokens(word, comments) %>% 
+reviews_word <- reviews_tidy %>%
   count(word, sort = TRUE)
 
 total_words <- reviews_word %>% 
@@ -307,26 +307,25 @@ Here tf is the term-frequency and idf is the inverse document-frequency, a coeff
 
 
 ```{r}
-reviews_word <- reviews %>% 
-  unnest_tokens(word, comments) %>% 
-  count(word, sort = TRUE)
-
-total_words <- reviews_word %>% 
-  group_by(word) %>% 
-  summarize(total = sum(reviews_word$n))
-
+reviews_word <- reviews_tidy %>%   count(id, word, sort = TRUE)
+total_words <- reviews_word %>% group_by(id) %>%summarize(total = sum(n))
 reviews_word <- left_join(reviews_word, total_words)
-
-reviews_word
-reviews_word <- reviews_word %>% 
-  bind_tf_idf(word, total, n)
+reviews_word <- reviews_word %>% bind_tf_idf(word, id, n)
 
 reviews_word %>% select(-total) %>% arrange(desc(tf_idf))
 
-summary(reviews_word$tf_idf)
 ```
 
-```{r}
 
-```
+
+
+
+
+
+
+
+
+
+
+
 
