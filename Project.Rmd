@@ -58,12 +58,8 @@ pacman::p_load(knitr,
 And now we can download the data from the Github.
 
 ```{r}
-data = read_csv("https://github.com/emanhamed/Houses-dataset")
-```
-
-```{r}
 calendar <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/calendar.csv")
-listings <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/listening.csv")
+listings <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/listenings.csv")
 neighbourhoods <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/neighbourhoods.csv")
 reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/reviews.csv")
 
