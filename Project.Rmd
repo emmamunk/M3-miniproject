@@ -17,7 +17,7 @@ output:
 
 # Data desciption
 
-# Multiple input model
+# Data preprocessing 
 
 ## Load libaries
 
@@ -135,6 +135,24 @@ summary(listings$availability_365)
 ```
 
 Here the minimum is 0 and the maximu is 365. The median is 0 and the mean is 65.61. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
