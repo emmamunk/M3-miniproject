@@ -78,7 +78,8 @@ reviews = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb
 In the variable listings, there's a lof of variables. We have choosen some of them, including id, neighbourhood, room type, minimum nights, number of reviews, reviews per month, calculated host listings count and availability 365.
 
 ```{r}
-listings = listings %>% select(c(monthly_price, neighbourhood, minimum_nights, accommodates, bathrooms, bedrooms, beds, number_of_reviews, guests_included, review_scores_rating, availability_365))
+
+listings = listings %>% select(c(price, neighbourhood, room_type, property_type, accommodates, bathrooms, bedrooms, beds, bed_type, number_of_reviews, guests_included, review_scores_rating))
 ```
 
 
@@ -91,7 +92,7 @@ listings = na.omit(listings)
 After removing NA's, we're down to 6273 observationsa and eight variables. Now, we'll remove every listing, where availability is equal to zero. 
 
 ```{r}
-listings$monthly_price = as.numeric(gsub('[$,]', '', listings$monthly_price))
+listings$price = as.numeric(gsub('[$,]', '', listings$price))
 ```
 
 ```{r}
@@ -103,7 +104,7 @@ listings
 We'll start by splitting the data into test and training.
 
 ```{r}
-index = createDataPartition(y = listings$monthly_price, p = 0.75, list = FALSE)
+index = createDataPartition(y = listings$price, p = 0.75, list = FALSE)
 
 training = listings[index,] 
 test = listings[-index,] 
@@ -112,7 +113,7 @@ test = listings[-index,]
 
 
 ```{r}
-reci <- recipe(monthly_price ~ ., data = training) %>%
+reci <- recipe(price ~ ., data = training) %>%
   step_center(all_numeric(), -all_outcomes()) %>% 
   step_scale(all_numeric(), -all_outcomes()) %>% 
   step_zv(all_predictors())
@@ -127,11 +128,11 @@ reci
 ```
 
 ```{r}
-x_train = bake(reci, new_data = training) %>% select(-monthly_price) 
-y_train = training %>% pull(monthly_price)
+x_train = bake(reci, new_data = training) %>% select(-price) 
+y_train = training %>% pull(price)
 
-x_test = bake(reci, new_data = test) %>% select(-monthly_price) 
-y_test =  test %>% pull(monthly_price)
+x_test = bake(reci, new_data = test) %>% select(-price) 
+y_test =  test %>% pull(price)
 ```
 
 ```{r}
