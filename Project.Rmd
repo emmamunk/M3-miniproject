@@ -62,71 +62,11 @@ data = read_csv("https://github.com/emanhamed/Houses-dataset")
 ```
 
 ```{r}
-files <- list.files(path = "C:/Users/Michael Thomsen/Desktop/Houses-dataset-master/Houses Dataset", 
-                    pattern = "*.jpg", full.names=TRUE)
-images <- lapply(files,FUN = simplify )
-house_info <- read_table2("C:/Users/Michael Thomsen/Desktop/Houses-dataset-master/Houses Dataset/HousesInfo.txt")
+calendar <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/calendar.csv")
+listings <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/listening.csv")
+neighbourhoods <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/neighbourhoods.csv")
+reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/reviews.csv")
+
 ```
 
-
-```{r}
-files <- list.files(path = "C:/Users/Emma/OneDrive/Universitetet/Houses-dataset-master/Houses-dataset-master/Houses-dataset/", 
-                    pattern = "*.jpg", full.names=TRUE)
-images <- lapply(files,FUN = simplify )
-house_info <- read_table2("C:/Users/Emma/OneDrive/Universitetet/Houses-dataset-master/Houses-dataset-master/Houses-dataset/HousesInfo.txt")
-```
-
-## Preprocess of numeric 
-
-We'll start with looking at the distribution of the data, here number of bedrooms, bathrooms, zipcode. The area is differently distributed, so there's not much to look in to. We'll start with the bedrooms.
-
-```{r}
-table(house_info$Bedrooms)
-```
-Here we can see that most of the houses have 2 to 4 bedrooms. And now the bathrooms.
-
-```{r}
-table(house_info$Bathrooms)
-```
-And most of the houses have 2 to 3 badrooms. 
-
-```{r}
-table(house_info$Zipcode)
-```
-Here we can see that some zipcodes only are represented by 1 or 2 houses while other have up to 100 houses. 
-
-```{r}
-index = createDataPartition(house_info, p=0.75, list=TRUE)
-
-training = house_info[index,]
-test = house_info[-index,]
-```
-
-
-```{r}
-normalize()
-```
-
-
-
-## Preprocess of images
-
-
-```{r}
-base_path <- file.path(images, fsep = .Platform$path.sep)
-house_path <- sort(base_path)
-
-#options(max.print = 2200)
-#table(images)
-table(house_path)
-as.
-house_path %>% as.numeric(house_path)
-```
-
-
-```{r}
-input_images <- (images)
-output_images <- np_array(house_path,dtype = "float32",order = "F")
-np_a
-```
 
