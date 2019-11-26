@@ -60,21 +60,13 @@ pacman::p_load(knitr,
 And now we can download the data from the Github.
 
 ```{r}
-calendar <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/calendar.csv")
-listings <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/listings.csv")
-neighbourhoods <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/neighbourhoods.csv")
-reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/AirBnB/reviews_details.csv")
+listings <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/listings.csv")
+reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/reviews_detailed.csv")
 
-calendar %>% 
-  rename(id = listing_id)
-reviews %>% 
-  rename(id = listing_id)
-
-data <- merge(calendar, listings, reviews, by = "id")
 ```
 
 ```{r}
-listings = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb-listings/listings.csv")
+listings = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb-listings/listings_detailed.csv")
 
 reviews = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb-listings/reviews_detailed.csv")
 ```
