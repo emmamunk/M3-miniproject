@@ -19,7 +19,7 @@ output:
 
 # Multiple input model
 
-## Data
+## Load libaries
 
 We start by cleaning the environment.
 
@@ -55,6 +55,8 @@ pacman::p_load(knitr,
                )
 ```
 
+## Data
+
 And now we can download the data from the Github.
 
 ```{r}
@@ -71,4 +73,73 @@ reviews %>%
 data <- merge(calendar, listings, reviews, by = "id")
 ```
 
+```{r}
+listings = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb-listings/listings.csv")
+reviews = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb-listings/reviews.csv")
+reviews_detailed = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb-listings/reviews_detailed.csv")
+```
 
+## Data preprocessing
+
+In the variable listings, there's a lof of variables. We have choosen some of them, including id, neighbourhood, room type, minimum nights, number of reviews, reviews per month, calculated host listings count and availability 365.
+
+```{r}
+listings = listings %>% select(c(id, neighbourhood, room_type, minimum_nights, number_of_reviews, reviews_per_month, calculated_host_listings_count, availability_365))
+```
+
+And then we'll remove NA's.
+
+```{r}
+listings = na.omit(listings)
+```
+
+After removing NA's, we're down to 6273 observationsa and eight variables. Now, we'll remove every listing, where availability is equal to zero. 
+
+```{r}
+listings = listings %>% filter(availability_365 > 0)
+```
+
+## Understanding the data
+Now we're going to get a understanding of the variables. The first one is neighbourhoods.
+
+```{r}
+table(listings$neighbourhood)
+```
+
+Here we can see that there's 14 different neighbourhoods. The next variable is room type.
+
+```{r}
+table(listings$room_type)
+```
+
+Here, we can see that most of the rooms are either entire hooms/apartments or a private room. NOw, let's look at the mininum nights.
+
+```{r}
+summary(listings$minimum_nights)
+```
+
+Here, we can see that the number of observation slowly decreses as number og minimum nights increses. The mininum is 1 and the maximum is 500. Here we could do some filtering, but we're not going to do that as there's a few of the apartments where the minimum nights is quiet high, but we're not going to filter for it.  
+
+```{r}
+summary(listings$number_of_reviews)
+```
+
+Here, we run a summary. The minimum number of reviews is 1 while the maximum number of reviews is 508. Here the mean number of reviews is 19, while the median is 17. 
+
+```{r}
+summary(listings$reviews_per_month)
+```
+
+Here, we run a summary again. The minium reviews per months id 0.02 while the maxium is 10.49. The median is 0.46 and the mean is 1.048. 
+
+```{r}
+summary(listings$calculated_host_listings_count)
+```
+
+Here the calculated host listings count goes from 1, which is the minimum, to 116, which is the maximum. Most have 1, as median is 1. Mean is 1.74. And lastely, availability.
+
+```{r}
+summary(listings$availability_365)
+```
+
+Here the minimum is 0 and the maximu is 365. The median is 0 and the mean is 65.61. 
