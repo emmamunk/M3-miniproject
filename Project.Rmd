@@ -17,7 +17,7 @@ output:
 
 # Data desciption
 
-# Multiple input model
+# Data preprocessing 
 
 ## Load libaries
 
@@ -76,7 +76,7 @@ reviews = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb
 In the variable listings, there's a lof of variables. We have choosen some of them, including id, neighbourhood, room type, minimum nights, number of reviews, reviews per month, calculated host listings count and availability 365.
 
 ```{r}
-listings = listings %>% select(c(id, neighbourhood, room_type, minimum_nights, number_of_reviews, reviews_per_month, calculated_host_listings_count, availability_365))
+listings = listings %>% select(c(price, id, neighbourhood, room_type, minimum_nights, number_of_reviews, reviews_per_month, calculated_host_listings_count, availability_365)) %>% as_tibble()
 ```
 
 And then we'll remove NA's.
@@ -107,7 +107,7 @@ table(listings$room_type)
 Here, we can see that most of the rooms are either entire hooms/apartments or a private room. NOw, let's look at the mininum nights.
 
 ```{r}
-summary(listings$minimum_nights)
+table(listings$minimum_nights)
 ```
 
 Here, we can see that the number of observation slowly decreses as number og minimum nights increses. The mininum is 1 and the maximum is 500. Here we could do some filtering, but we're not going to do that as there's a few of the apartments where the minimum nights is quiet high, but we're not going to filter for it.  
@@ -116,25 +116,78 @@ Here, we can see that the number of observation slowly decreses as number og min
 summary(listings$number_of_reviews)
 ```
 
-Here, we run a summary. The minimum number of reviews is 1 while the maximum number of reviews is 508. Here the mean number of reviews is 19, while the median is 17. 
+Here, we run a summary. The minimum number of reviews is 1 while the maximum number of reviews is 508. Here the mean number of reviews is 28.59, while the median is 12 
 
 ```{r}
 summary(listings$reviews_per_month)
 ```
 
-Here, we run a summary again. The minium reviews per months id 0.02 while the maxium is 10.49. The median is 0.46 and the mean is 1.048. 
+Here, we run a summary again. The minium reviews per months id 0.02 while the maxium is 10.49. The median is 1.61 and the mean is 1.00. 
 
 ```{r}
 summary(listings$calculated_host_listings_count)
 ```
 
-Here the calculated host listings count goes from 1, which is the minimum, to 116, which is the maximum. Most have 1, as median is 1. Mean is 1.74. And lastely, availability.
+Here the calculated host listings count goes from 1, which is the minimum, to 116, which is the maximum. Most have 1, as median is 1. Mean is 2.22. And lastely, availability.
 
 ```{r}
 summary(listings$availability_365)
 ```
 
-Here the minimum is 0 and the maximu is 365. The median is 0 and the mean is 65.61. 
+Here the minimum is 1 and the maximum is 365. The median is 93 and the mean is 141.
+
+```{r}
+listings$price = as.numeric(gsub('[$,]', '', listings$price))
+```
+
+
+# Supervised machine learning
+
+We'll start by splitting the data into test and training.
+
+```{r}
+index = createDataPartition(y = listings$price, p = 0.75, list = FALSE)
+
+training = listings[index,] 
+test = listings[-index,] 
+```
+
+```{r}
+fit_lm = lm(price ~ ., data = listings)
+fit_lm %>% summary()
+```
+
+```{r}
+reci <- recipe(medv ~ ., data = training) %>%
+  step_center(all_numeric(), -all_outcomes()) %>% # Centers all numeric variables to mean = 0
+  step_scale(all_numeric(), -all_outcomes()) %>% # scales all numeric variables to sd = 1
+  step_zv(all_predictors())  # Removed predictors with zero variance
+
+
+# knn inputation of missing values
+reci %<>%
+  step_knnimpute(all_predictors()) 
+
+# Recipe in the end has to be prepared on the treining data
+reci %<>% 
+  prep(data = train)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
