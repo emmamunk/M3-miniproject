@@ -52,7 +52,8 @@ pacman::p_load(knitr,
                reticulate,
                SciencesPo,
                caret,
-               textstem
+               textstem,
+               recipes
                )
 ```
 
@@ -77,8 +78,9 @@ reviews = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb
 In the variable listings, there's a lof of variables. We have choosen some of them, including id, neighbourhood, room type, minimum nights, number of reviews, reviews per month, calculated host listings count and availability 365.
 
 ```{r}
-listings = listings %>% select(c(price, id, neighbourhood, room_type, minimum_nights, number_of_reviews, reviews_per_month, calculated_host_listings_count, availability_365)) %>% as_tibble()
+listings = listings %>% select(c(monthly_price, neighbourhood, minimum_nights, accommodates, bathrooms, bedrooms, beds, number_of_reviews, guests_included, review_scores_rating, availability_365))
 ```
+
 
 And then we'll remove NA's.
 
@@ -89,101 +91,97 @@ listings = na.omit(listings)
 After removing NA's, we're down to 6273 observationsa and eight variables. Now, we'll remove every listing, where availability is equal to zero. 
 
 ```{r}
-listings = listings %>% filter(availability_365 > 0)
+listings$monthly_price = as.numeric(gsub('[$,]', '', listings$monthly_price))
 ```
-
-## Understanding the data
-Now we're going to get a understanding of the variables. The first one is neighbourhoods.
 
 ```{r}
-table(listings$neighbourhood)
+listings
 ```
-
-Here we can see that there's 14 different neighbourhoods. The next variable is room type.
-
-```{r}
-table(listings$room_type)
-```
-
-Here, we can see that most of the rooms are either entire hooms/apartments or a private room. NOw, let's look at the mininum nights.
-
-```{r}
-table(listings$minimum_nights)
-```
-
-Here, we can see that the number of observation slowly decreses as number og minimum nights increses. The mininum is 1 and the maximum is 500. Here we could do some filtering, but we're not going to do that as there's a few of the apartments where the minimum nights is quiet high, but we're not going to filter for it.  
-
-```{r}
-summary(listings$number_of_reviews)
-```
-
-Here, we run a summary. The minimum number of reviews is 1 while the maximum number of reviews is 508. Here the mean number of reviews is 28.59, while the median is 12 
-
-```{r}
-summary(listings$reviews_per_month)
-```
-
-Here, we run a summary again. The minium reviews per months id 0.02 while the maxium is 10.49. The median is 1.61 and the mean is 1.00. 
-
-```{r}
-summary(listings$calculated_host_listings_count)
-```
-
-Here the calculated host listings count goes from 1, which is the minimum, to 116, which is the maximum. Most have 1, as median is 1. Mean is 2.22. And lastely, availability.
-
-```{r}
-summary(listings$availability_365)
-```
-
-Here the minimum is 1 and the maximum is 365. The median is 93 and the mean is 141.
-
-```{r}
-listings$price = as.numeric(gsub('[$,]', '', listings$price))
-```
-
 
 # Supervised machine learning
 
 We'll start by splitting the data into test and training.
 
 ```{r}
-index = createDataPartition(y = listings$price, p = 0.75, list = FALSE)
+index = createDataPartition(y = listings$monthly_price, p = 0.75, list = FALSE)
 
 training = listings[index,] 
 test = listings[-index,] 
 ```
 
+
+
 ```{r}
-fit_lm = lm(price ~ ., data = listings)
+reci <- recipe(monthly_price ~ ., data = training) %>%
+  step_center(all_numeric(), -all_outcomes()) %>% 
+  step_scale(all_numeric(), -all_outcomes()) %>% 
+  step_zv(all_predictors())
+
+reci = reci %>% step_knnimpute(all_predictors()) 
+
+reci = reci %>% prep(data = training)
+```
+
+```{r}
+reci
+```
+
+```{r}
+x_train = bake(reci, new_data = training) %>% select(-monthly_price) 
+y_train = training %>% pull(monthly_price)
+
+x_test = bake(reci, new_data = test) %>% select(-monthly_price) 
+y_test =  test %>% pull(monthly_price)
+```
+
+```{r}
+ctrl = trainControl(method = "cv", 
+                     number = 10)
+```
+
+```{r}
+fit_lm <- train(x = x_train, 
+                y = y_train, 
+                trControl = ctrl, 
+                method = "glm",
+                family = "gaussian")
+```
+
+```{r}
 fit_lm %>% summary()
 ```
 
 ```{r}
-reci <- recipe(medv ~ ., data = training) %>%
-  step_center(all_numeric(), -all_outcomes()) %>% # Centers all numeric variables to mean = 0
-  step_scale(all_numeric(), -all_outcomes()) %>% # scales all numeric variables to sd = 1
-  step_zv(all_predictors())  # Removed predictors with zero variance
-
-
-# knn inputation of missing values
-reci %<>%
-  step_knnimpute(all_predictors()) 
-
-# Recipe in the end has to be prepared on the treining data
-reci %<>% 
-  prep(data = train)
+fit_lm
 ```
 
+```{r}
+tune_glmnet = expand.grid(alpha = seq(0, 1, length = 5), lambda = seq(0, 1, length = 5))
+tune_glmnet
+```
 
+```{r}
+fit_glmnet <- train(x = x_train, 
+                    y = y_train, 
+                    trControl = ctrl, 
+                    method = "glmnet", family = "gaussian", 
+                    tuneGrid = tune_glmnet)
+```
 
+```{r}
+fit_glmnet
+```
+```{r}
+pred_lm = predict(fit_lm, newdata = x_test) 
+pred_glmnet <- predict(fit_glmnet, newdata = x_test) 
 
+# RMSE OLS
+sqrt(mean( (y_test - predict(fit_lm, newdata = x_test) ) ^ 2))
+```
 
-
-
-
-
-
-
+```{r}
+sqrt(mean( (y_test - predict(fit_glmnet, newdata = x_test) ) ^ 2))
+```
 
 
 
