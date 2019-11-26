@@ -223,12 +223,14 @@ Data preprocessing NLP
 ```{r}
 listings <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/listings.csv")
 reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/reviews_detailed.csv")
+glimpse(reviews)
 ```
 
 Tokenize and cleaning
 ```{r}
 reviews_tidy <- reviews %>% 
-  unnest_tokens(word, comments)
+  unnest_tokens(word, comments) %>% 
+  count(listing_id, word, sort = TRUE)
 
 reviews_tidy <- reviews_tidy %>% 
   anti_join(stop_words)
@@ -283,17 +285,17 @@ reviews_tidy %>%
 ```
 
 ```{r}
-total_words <- bing_word_counts %>% 
+reviews_word <- reviews %>% 
+  unnest_tokens(word, comments) %>% 
+  count(word, sort = TRUE)
+
+total_words <- reviews_word %>% 
   group_by(word) %>% 
-  summarize(total = sum(n))
-bing_word_counts <- merge(bing_word_counts, total_words, by = "word")
+  summarize(total = sum(reviews_word$n))
 
-freq_by_rank <- bing_word_counts %>% 
-  group_by(word) %>%
-  mutate(rank = row_number(),
-         'term frequency'=n/total)
+reviews_word <- left_join(reviews_word, total_words, by = "word")
 
-freq_by_rank
+reviews_word
 ```
 
 
@@ -305,9 +307,26 @@ Here tf is the term-frequency and idf is the inverse document-frequency, a coeff
 
 
 ```{r}
-tokens_nlp <- topwords %>%
-  bind_tf_idf(word,reviews_tidy ,n)
+reviews_word <- reviews %>% 
+  unnest_tokens(word, comments) %>% 
+  count(word, sort = TRUE)
+
+total_words <- reviews_word %>% 
+  group_by(word) %>% 
+  summarize(total = sum(reviews_word$n))
+
+reviews_word <- left_join(reviews_word, total_words)
+
+reviews_word
+reviews_word <- reviews_word %>% 
+  bind_tf_idf(word, total, n)
+
+reviews_word %>% select(-total) %>% arrange(desc(tf_idf))
+
+summary(reviews_word$tf_idf)
 ```
 
+```{r}
 
-We tried to run a tf-idf analysis but we couldn't really say anything from the analysis, probably because there's a lot of documents. Every person has their own dictionary and a lot of words may appear very rare, and therefor they may be giving a high idf coefficient, which is why their tf-idf is high. If we were analyzing a number of books, the analyses may have made more sense. 
+```
+
