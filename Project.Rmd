@@ -219,7 +219,95 @@ sqrt(mean( (y_test - predict(fit_glmnet, newdata = x_test) ) ^ 2))
 
 ############################STOP HER EMMA!!!!!!!!!!!!!!!!!!!!!!####################################
 Data preprocessing NLP
+Data preprocessing NLP
 ```{r}
-
+listings <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/listings.csv")
+reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/reviews_detailed.csv")
 ```
 
+Tokenize and cleaning
+```{r}
+reviews_tidy <- reviews %>% 
+  unnest_tokens(word, comments)
+
+reviews_tidy <- reviews_tidy %>% 
+  anti_join(stop_words)
+  
+#Overview over most used words
+reviews_tidy %>% 
+  count(word, sort = TRUE)
+```
+
+
+```{r}
+reviews_tidy %>% 
+  count(word, sort = TRUE) %>% 
+  top_n(20,n) %>%
+  mutate(word = reorder(word, n)) %>% 
+  ggplot(aes(word,n)) + 
+  geom_col() +
+  xlab(NULL)+
+  coord_flip()
+
+```
+We see that the individual tokens that are most frequent are words such as "apartment", "stockholm" or  names such as "clean", "close", which describes how the Airbnb home is. 
+
+
+```{r}
+bing_word_counts <- reviews_tidy %>% 
+  inner_join(get_sentiments("bing")) %>% 
+  count(word,sentiment, sort = TRUE) %>% 
+  ungroup()
+
+bing_word_counts
+```
+```{r}
+bing_word_counts %>%
+  group_by(sentiment) %>%
+  top_n(25) %>%
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(y = "Contribution to sentiment",
+       x = NULL) +
+  coord_flip()
+```
+Plotting wordcloud
+```{r}
+reviews_tidy %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words = 50))
+```
+
+```{r}
+total_words <- bing_word_counts %>% 
+  group_by(word) %>% 
+  summarize(total = sum(n))
+bing_word_counts <- merge(bing_word_counts, total_words, by = "word")
+
+freq_by_rank <- bing_word_counts %>% 
+  group_by(word) %>%
+  mutate(rank = row_number(),
+         'term frequency'=n/total)
+
+freq_by_rank
+```
+
+
+## TF-IDF
+Up untill now, equal weight have been given to all words, but some are more rare than others. Term frequency–inverse document frequency or just tf-idf, is a way to analyze how important a word is to a document in a corpus:
+
+$$\text{tf-idf}(t, d) = \text{tf}(t, d) \times \text{idf}(t)$$
+Here tf is the term-frequency and idf is the inverse document-frequency, a coefficient which is larger whenever the particular term is found in a lesser number of documents. 
+
+
+```{r}
+tokens_nlp <- topwords %>%
+  bind_tf_idf(word,reviews_tidy ,n)
+```
+
+
+We tried to run a tf-idf analysis but we couldn't really say anything from the analysis, probably because there's a lot of documents. Every person has their own dictionary and a lot of words may appear very rare, and therefor they may be giving a high idf coefficient, which is why their tf-idf is high. If we were analyzing a number of books, the analyses may have made more sense. 
