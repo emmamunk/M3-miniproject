@@ -41,6 +41,7 @@ And then we'll load a bunch of other packages.
 ```{r}
 #Loading packages
 if (!require("pacman")) install.packages("pacman")
+<<<<<<< HEAD
 pacman::p_load(knitr, # For knitr to html
                rmarkdown, # For formatting the document
                tidyverse, # Standard datasciewnce toolkid (dplyr, ggplot2 et al.)
@@ -77,6 +78,22 @@ pacman::p_load(knitr, # For knitr to html
                lda, # For LDA-analysis
                topicmodels, # LDA models
                broom
+=======
+pacman::p_load(knitr,
+               readr,
+               rmarkdown, 
+               tidyverse,
+               tidytext,
+               dplyr,
+               broom,
+               keras,
+               drat,
+               reticulate,
+               SciencesPo,
+               caret,
+               textstem,
+               recipes
+>>>>>>> parent of 13d39ea... Update Project.Rmd
                )
 ```
 
@@ -251,26 +268,7 @@ glimpse(reviews)
 
 Tokenize and cleaning
 ```{r}
-tokens_clean <- reviews %>% 
-  unnest_tokens(word, comments, to_lower = TRUE) %>% 
-  mutate(word = word %>% str_remove_all("[^a-zA-Z]")) %>%
-  filter(str_length(word) > 1) %>% 
-  mutate(word = lemmatize_words(word))
 
-reviewtext_lemma <- tokens_clean %>% 
-  group_by(id) %>% 
-  summarize(comments = str_c(word, collapse = " ")) %>% 
-  ungroup() %>% 
-  select(comments) %>% 
-  as_vector()
-
-data_clean <- reviews %>%
-  mutate(comments = reviewtext_lemma)
-
-tokens_nlp <- tokens_clean %>% anti_join(stop_words)
-
-tokens_nlp %>% 
-  count(word)
 
 ```
 
@@ -278,7 +276,7 @@ tokens_nlp %>%
 ```{r}
 reviews_tidy <- reviews %>% 
   unnest_tokens(word, comments) %>% 
-  count(id,word, sort = TRUE) 
+  count(id, word, sort = TRUE)
 
 
 reviews_tidy <- reviews_tidy %>% 
@@ -287,17 +285,6 @@ reviews_tidy <- reviews_tidy %>%
 #Overview over most used words
 reviews_tidy %>% 
   count(word, sort = TRUE)
-
-own_stopwords <- tibble(word= c("5","2","10","3","15","4","20","1","30","7"),
-                        lexicon = "OWN")
-reviews_tidy %<>%
-  anti_join(stop_words %>% bind_rows(own_stopwords), by = "word")
-
-reviews_tidy %<>%
-  mutate(word = word %>% str_remove_all("[^[:alnum:]]") ) %>%
-  filter(str_length(word) > 1)
-
-
 ```
 
 
