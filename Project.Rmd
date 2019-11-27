@@ -243,10 +243,10 @@ sqrt(mean( (y_test - predict(fit_glmnet, newdata = x_test) ) ^ 2))
 
 
 ############################STOP HER EMMA!!!!!!!!!!!!!!!!!!!!!!####################################
+
 Data preprocessing NLP
 
 ```{r}
-listings <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/listings.csv")
 reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/reviews_detailed.csv")
 glimpse(reviews)
 ```
