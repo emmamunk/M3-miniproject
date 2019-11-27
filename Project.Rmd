@@ -246,31 +246,46 @@ sqrt(mean( (y_test - predict(fit_glmnet, newdata = x_test) ) ^ 2))
 
 Data preprocessing NLP
 
+Loading in the review dataset locally:
+After loading we want to take a glimpse on how the dataset is looking. For this we use the function 'glimpse', to give an overview of which variables the dataset contains.
 ```{r}
 reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/reviews_detailed.csv")
 glimpse(reviews)
 ```
 
+As the data is very raw and messy, we now want to do some cleaning. We remove everything that isn't normal letters. Which is special characters, numbers and etc. Furthermore we will set all letters from the comments column to lower case.
+
+To clean up the data we are using lemmatization. The purpose of this is to not only analyze the exact word strings in the reviews, as this would include several possible forms of the words used. F. ex. think and thought. Instead we want to merge all possible forms of a word into it's root word. Lemmatization try and do so, by using detailed dictionaries which the algorithm looks trough to link a given word string back to it's root word. This is a more advanced method than stemming and should be beneficial in this report.
 
 
 ```{r}
+#Unnest the comments and lemmatize the words
 reviews_tidy <- reviews %>% 
   unnest_tokens(word, comments) %>% 
-  count(id, word, sort = TRUE)
+  count(id, word, sort = TRUE) %>% 
+  mutate(word = lemmatize_words(word))
 
+#Defining the number of times a word is used the comments
 reviews_tidy %>%
   count(word, sort = TRUE)
 
+#Defining own stopwords, that isn't relevant for the analysis
 own_stopwords <- tibble(c("2","10","5","7","3","15"),
                         lexicon = "OWN")
-
+#Removing theese homemade stopwords, but also cleaning for general stopwords such as the, as, a and  etc.
 reviews_tidy %<>%
   anti_join(stop_words %>% bind_rows(own_stopwords), by = "word")
 
+#Removing all numbers and special characters and removing words who only contain one letter
 reviews_tidy %<>%
   mutate(word = word %>% str_remove_all("[^[:alnum:]]") ) %>%
+    mutate(word = word %>% str_remove_all("[^a-zA-Z]")) %>%
   filter(str_length(word) > 1)
+```
 
+After cleaning up the data, we can now look at which words are most represented in the comments. To do this we define a variable called topwords, which will be used to visualize it through a table and wordcloud
+```{r}
+#Defining the the topwords after cleaning
 topwords <- reviews_tidy %>%
   count(word, sort = TRUE)
 
@@ -283,38 +298,42 @@ topwords %>%
   labs(title = "Word Counts",
        x = "Frequency",
        y = "Top Words")
-#Wordcloud
-wordcloud(topwords$word, topwords$n, random.order = FALSE, max.words = 50, colors = brewer.pal(8,"Dark2"))
-
-
 ```
 
-We see that the individual tokens that are most frequent are words such as "apartment", "stockholm" or  names such as "clean", "comfortable", which describes how the Airbnb home is. 
+We see that the individual tokens that are most frequent are words such as "apartment", "stockholm" or names such as "clean", "comfortable", which describes how the Airbnb home is. 
 
 #Sentiment analysis
+
+Sentiment analysis refers to a use of text analysis to extract and identify subjective information, where it analyzises whether the words are positive or negative. In this section, we will be doing two sentiment analysis, first by identifying positive and negative words using the bing lexicon and after this using the afinn lexicon. 
+
+## Bing
+We wil start with the Bing lexicon. The Bing lexicon categorizes words in a binary fashion as positive or negative with no weighting. Here, we are using the function get_sentiment to get a specific sentiment lexicon and inner_join to join the lexicon with tokenized data. 
+
+Now we are plotting a word count, grouped by sentiment, showing the 10 most frequent negative and positive words. 
+
 ```{r}
-bing_word_counts <- reviews_tidy %>% 
-  inner_join(get_sentiments("bing")) %>% 
-  count(word,sentiment, sort = TRUE) %>% 
-  ungroup()
+sentiment_bing <- reviews_tidy %>% inner_join(get_sentiments("bing"))
 
-bing_word_counts
+sentiment_analysis <- sentiment_bing %>% 
+  filter(sentiment %in% c("positive", "negative"))
+#Calculating the number of words in each sentiment
+word_counts <- sentiment_analysis %>%
+count(word, sentiment) %>%
+group_by(sentiment) %>%
+top_n(10, n) %>%
+ungroup() %>%
+mutate(
+word2 = fct_reorder(word, n))
+
+#Plotting the two sentiment with their respective words
+ggplot(word_counts, aes(x = word2, y = n, fill = sentiment)) +
+geom_col(show.legend = FALSE) +
+facet_wrap(~ sentiment, scales ="free") +
+coord_flip() +
+labs(title ="Sentiment Word Counts",x ="Words")
 ```
-```{r}
-bing_word_counts %>%
-  group_by(sentiment) %>%
-  top_n(25) %>%
-  ungroup() %>%
-  mutate(word = reorder(word, n)) %>%
-  ggplot(aes(word, n, fill = sentiment)) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~sentiment, scales = "free_y") +
-  labs(y = "Contribution to sentiment",
-       x = NULL) +
-  coord_flip()
-```
 
-
+We see that in general that negative words aren't represented so much as the positive words in the Airbnb comments. Which seems kind odd, then comparing to the expectation beforehand. The reason to the odd distrubtion could be that........................................................................ 
 
 
 
