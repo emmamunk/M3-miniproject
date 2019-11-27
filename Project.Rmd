@@ -270,7 +270,7 @@ data_clean <- reviews %>%
 tokens_nlp <- tokens_clean %>% anti_join(stop_words)
 
 tokens_nlp %>% 
-  count(word, sort = TRUE)
+  count(word)
 
 ```
 
