@@ -77,7 +77,9 @@ pacman::p_load(knitr, # For knitr to html
                yardstick,
                lda, # For LDA-analysis
                topicmodels, # LDA models
-               broom)
+               broom,
+               caret,
+               recipes)
 ```
 
 ## Data
@@ -85,7 +87,7 @@ pacman::p_load(knitr, # For knitr to html
 And now we can download the data from the Github.
 
 ```{r}
-listings <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/listings.csv")
+listings <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/listings_detailed.csv")
 reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/reviews_detailed.csv")
 
 ```
