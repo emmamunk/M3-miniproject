@@ -55,7 +55,8 @@ pacman::p_load(knitr,
                caret,
                textstem,
                recipes,
-               MLmetrics
+               MLmetrics,
+               GGally
                )
 ```
 
@@ -79,7 +80,7 @@ reviews = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb
 In the variable listings, there's a lof of variables. We have choosen some of them, including id, neighbourhood, room type, minimum nights, number of reviews, reviews per month, calculated host listings count and availability 365.
 
 ```{r}
-listings = listings %>% select(c(price, zipcode, room_type, accommodates, bathrooms, bedrooms, beds, number_of_reviews, guests_included, review_scores_rating)) %>% filter(room_type %in% c("Entire home/apt", "Private room"))
+listings = listings %>% select(c(price, zipcode, room_type, accommodates, bathrooms, bedrooms, number_of_reviews, guests_included, review_scores_rating)) %>% filter(room_type %in% c("Entire home/apt", "Private room"))
 ```
 
 
@@ -124,6 +125,10 @@ And then we'll remove NA's.
 
 ```{r}
 listings = na.omit(listings)
+```
+
+```{r}
+ggcorr(listings)
 ```
 
 ```{r}
@@ -181,8 +186,8 @@ ctrl <- trainControl(method = "cv",
                                      complete = TRUE),
                      search = "random" )
 
-metric <- "Accuracy" # Which metric should be optimized (more on that later)
-n_tune = 10 # number of tuning rounds
+metric <- "Accuracy" 
+n_tune = 10 
 ```
 
 ```{r}
@@ -195,22 +200,17 @@ fit_dt <- train(x = x_train,
 ```
 
 ```{r}
-library(GGally)
-
-ggcorr(listings)
+fit_dt
 ```
 
 ```{r}
-fit_lm
+pred_dt <- predict(fit_dt, newdata = x_test)
 ```
 
 ```{r}
-pred_lm = fit_lm %>% predict() 
-pred_lm[1:6]
+pred_dt %>% head()
 ```
-```{r}
-listings$price[1:6]
-```
+
 
 
 # Mixed Input Model
