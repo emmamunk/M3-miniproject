@@ -46,12 +46,12 @@ pacman::p_load(knitr,
                rmarkdown, 
                tidyverse,
                tidytext,
+               plyr,
                dplyr,
                broom,
                keras,
                drat,
                reticulate,
-               SciencesPo,
                caret,
                textstem,
                recipes
@@ -229,10 +229,9 @@ glimpse(reviews)
 
 Tokenize and cleaning
 ```{r}
-pacman::p_load(textstem)
 reviews_tidy <- reviews %>% 
   unnest_tokens(word, comments) %>% 
-  count(id, word, sort = TRUE) 
+  count(id,word, sort = TRUE) 
 
 
 reviews_tidy <- reviews_tidy %>% 
@@ -241,6 +240,17 @@ reviews_tidy <- reviews_tidy %>%
 #Overview over most used words
 reviews_tidy %>% 
   count(word, sort = TRUE)
+
+own_stopwords <- tibble(word= c("5","2","10","3","15","4","20","1","30","7"),
+                        lexicon = "OWN")
+reviews_tidy %<>%
+  anti_join(stop_words %>% bind_rows(own_stopwords), by = "word")
+
+reviews_tidy %<>%
+  mutate(word = word %>% str_remove_all("[^[:alnum:]]") ) %>%
+  filter(str_length(word) > 1)
+
+
 ```
 
 
