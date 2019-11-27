@@ -56,6 +56,7 @@ pacman::p_load(knitr,
                textstem,
                recipes,
                MLmetrics,
+               e1071,
                GGally
                )
 ```
@@ -65,7 +66,7 @@ pacman::p_load(knitr,
 And now we can download the data from the Github.
 
 ```{r}
-listings <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/listings.csv")
+listings <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/listings_detailed.csv")
 reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/reviews_detailed.csv")
 ```
 
@@ -80,7 +81,7 @@ reviews = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb
 In the variable listings, there's a lof of variables. We have choosen some of them, including id, neighbourhood, room type, minimum nights, number of reviews, reviews per month, calculated host listings count and availability 365.
 
 ```{r}
-listings = listings %>% select(c(price, zipcode, room_type, accommodates, bathrooms, bedrooms, number_of_reviews, guests_included, review_scores_rating)) %>% filter(room_type %in% c("Entire home/apt", "Private room"))
+listings = listings %>% select(c(price, zipcode, room_type, accommodates, bathrooms, bedrooms, beds, number_of_reviews, guests_included, review_scores_rating)) %>% filter(room_type %in% c("Entire home/apt", "Private room"))
 ```
 
 
@@ -125,10 +126,6 @@ And then we'll remove NA's.
 
 ```{r}
 listings = na.omit(listings)
-```
-
-```{r}
-ggcorr(listings)
 ```
 
 ```{r}
@@ -186,8 +183,8 @@ ctrl <- trainControl(method = "cv",
                                      complete = TRUE),
                      search = "random" )
 
-metric <- "Accuracy" 
-n_tune = 10 
+metric <- "Accuracy" # Which metric should be optimized (more on that later)
+n_tune = 10 # number of tuning rounds
 ```
 
 ```{r}
@@ -200,17 +197,22 @@ fit_dt <- train(x = x_train,
 ```
 
 ```{r}
-fit_dt
+library(GGally)
+
+ggcorr(listings)
 ```
 
 ```{r}
-pred_dt <- predict(fit_dt, newdata = x_test)
+fit_lm
 ```
 
 ```{r}
-pred_dt %>% head()
+pred_lm = fit_lm %>% predict() 
+pred_lm[1:6]
 ```
-
+```{r}
+listings$price[1:6]
+```
 
 
 # Mixed Input Model
