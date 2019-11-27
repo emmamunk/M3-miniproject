@@ -41,45 +41,22 @@ And then we'll load a bunch of other packages.
 ```{r}
 #Loading packages
 if (!require("pacman")) install.packages("pacman")
-
-pacman::p_load(knitr, # For knitr to html
-               rmarkdown, # For formatting the document
-               tidyverse, # Standard datasciewnce toolkid (dplyr, ggplot2 et al.)
-               data.table, # for reading in data ect. 
-               magrittr,# For advanced piping (%>% et al.)
-               igraph, # For network analysis
-               tidygraph, # For tidy-style graph manipulation
-               ggraph, # For ggplot2 style graph plotting
-               Matrix, # For some matrix functionality
-               ggforce, # Awesome plotting
-               kableExtra, # Formatting for tables
-               car, # recode functions 
-               tidytext, # Structure text within tidyverse
-               topicmodels, # For topic modelling
-               tm, # text mining library
-               quanteda, # for LSA (latent semantic analysis)
-               uwot, # for UMAP
-               dbscan, # for density based clustering
-               SnowballC,
-               textdata,
-               wordcloud, 
-               textstem, # for textstemming 
-               tidyr,
-               widyr,
-               reshape2,
-               quanteda,
-               uwot,
-               dbscan,
-               plotly,
-               rsample,
-               glmnet,
+pacman::p_load(knitr,
+               readr,
+               rmarkdown, 
+               tidyverse,
+               tidytext,
+               dplyr,
                broom,
-               yardstick,
-               lda, # For LDA-analysis
-               topicmodels, # LDA models
-               broom,
+               keras,
+               drat,
+               reticulate,
+               SciencesPo,
                caret,
-               recipes)
+               textstem,
+               recipes,
+               MLmetrics
+               )
 ```
 
 ## Data
@@ -87,9 +64,8 @@ pacman::p_load(knitr, # For knitr to html
 And now we can download the data from the Github.
 
 ```{r}
-listings <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/listings_detailed.csv")
+listings <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/listings.csv")
 reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/reviews_detailed.csv")
-
 ```
 
 ```{r}
@@ -103,21 +79,51 @@ reviews = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb
 In the variable listings, there's a lof of variables. We have choosen some of them, including id, neighbourhood, room type, minimum nights, number of reviews, reviews per month, calculated host listings count and availability 365.
 
 ```{r}
-
-listings = listings %>% select(c(price, neighbourhood, room_type, property_type, accommodates, bathrooms, bedrooms, beds, bed_type, number_of_reviews, guests_included, review_scores_rating))
+listings = listings %>% select(c(price, zipcode, room_type, accommodates, bathrooms, bedrooms, beds, number_of_reviews, guests_included, review_scores_rating)) %>% filter(room_type %in% c("Entire home/apt", "Private room"))
 ```
 
+
+```{r}
+listings$price = as.numeric(gsub('[$,]', '', listings$price))
+```
+
+```{r}
+listings$price_intervals = cut(listings$price, c(0, seq(500, 5500, by=500)))
+```
+
+```{r}
+listings$price_intervals = as.numeric(listings$price_intervals)
+```
+
+
+```{r}
+listings$price_intervals[listings$price_intervals == "1"] = "e"
+listings$price_intervals[listings$price_intervals == "2"] = "f"
+listings$price_intervals[listings$price_intervals == "3"] = "t"
+listings$price_intervals[listings$price_intervals == "4"] = "i"
+listings$price_intervals[listings$price_intervals == "5"] = "a"
+listings$price_intervals[listings$price_intervals == "6"] = "q"
+listings$price_intervals[listings$price_intervals == "7"] = "r"
+listings$price_intervals[listings$price_intervals == "8"] = "x"
+listings$price_intervals[listings$price_intervals == "9"] = "o"
+listings$price_intervals[listings$price_intervals == "10"] = "z"
+listings$price_intervals[listings$price_intervals == "11"] = "q"
+```
+
+
+
+```{r}
+listings$zipcode = as.numeric(gsub('[ ]', '', listings$zipcode))
+```
+
+```{r}
+listings$room_type = ifelse(listings$room_type == "Entire home/apt", 1, 0)
+```
 
 And then we'll remove NA's.
 
 ```{r}
 listings = na.omit(listings)
-```
-
-After removing NA's, we're down to 6273 observationsa and eight variables. Now, we'll remove every listing, where availability is equal to zero. 
-
-```{r}
-listings$price = as.numeric(gsub('[$,]', '', listings$price))
 ```
 
 ```{r}
@@ -129,7 +135,7 @@ listings
 We'll start by splitting the data into test and training.
 
 ```{r}
-index = createDataPartition(y = listings$price, p = 0.75, list = FALSE)
+index = createDataPartition(y = listings$price_intervals, p = 0.75, list = FALSE)
 
 training = listings[index,] 
 test = listings[-index,] 
@@ -138,7 +144,9 @@ test = listings[-index,]
 
 
 ```{r}
-reci <- recipe(price ~ ., data = training) %>%
+listings = listings %>% select(c(-price))
+
+reci = recipe(price_intervals ~ ., data = training) %>%
   step_center(all_numeric(), -all_outcomes()) %>% 
   step_scale(all_numeric(), -all_outcomes()) %>% 
   step_zv(all_predictors())
@@ -153,28 +161,43 @@ reci
 ```
 
 ```{r}
-x_train = bake(reci, new_data = training) %>% select(-price) 
-y_train = training %>% pull(price)
+x_train = bake(reci, new_data = training) %>% select(-price_intervals) 
+y_train = training %>% pull(price_intervals) %>% as.factor()
 
-x_test = bake(reci, new_data = test) %>% select(-price) 
-y_test =  test %>% pull(price)
+x_test = bake(reci, new_data = test) %>% select(-price_intervals) 
+y_test =  test %>% pull(price_intervals) %>% as.factor()
 ```
 
 ```{r}
-ctrl = trainControl(method = "cv", 
-                     number = 10)
+ctrl <- trainControl(method = "cv", 
+                     number = 10, 
+                     classProbs = TRUE, 
+                     savePredictions = TRUE, 
+                     summaryFunction = multiClassSummary, 
+                     verboseIter = FALSE,
+                     adaptive = list(min = 3, 
+                                     alpha = 0.05, 
+                                     method = "gls", 
+                                     complete = TRUE),
+                     search = "random" )
+
+metric <- "Accuracy" # Which metric should be optimized (more on that later)
+n_tune = 10 # number of tuning rounds
 ```
 
 ```{r}
-fit_lm <- train(x = x_train, 
+fit_dt <- train(x = x_train, 
                 y = y_train, 
                 trControl = ctrl, 
-                method = "glm",
-                family = "gaussian")
+                metric = metric,
+                tuneLength = n_tune,
+                method = "rpart") 
 ```
 
 ```{r}
-fit_lm %>% summary()
+library(GGally)
+
+ggcorr(listings)
 ```
 
 ```{r}
@@ -182,32 +205,28 @@ fit_lm
 ```
 
 ```{r}
-tune_glmnet = expand.grid(alpha = seq(0, 1, length = 5), lambda = seq(0, 1, length = 5))
-tune_glmnet
+pred_lm = fit_lm %>% predict() 
+pred_lm[1:6]
+```
+```{r}
+listings$price[1:6]
+```
+
+
+# Mixed Input Model
+
+```{r}
+fit.nnet <- train(price ~ ., training, 
+              method='nnet', 
+              trace = FALSE)
+
+fit.nnet
 ```
 
 ```{r}
-fit_glmnet <- train(x = x_train, 
-                    y = y_train, 
-                    trControl = ctrl, 
-                    method = "glmnet", family = "gaussian", 
-                    tuneGrid = tune_glmnet)
+plot(fit.nnet)
 ```
 
-```{r}
-fit_glmnet
-```
-```{r}
-pred_lm = predict(fit_lm, newdata = x_test) 
-pred_glmnet <- predict(fit_glmnet, newdata = x_test) 
-
-# RMSE OLS
-sqrt(mean( (y_test - predict(fit_lm, newdata = x_test) ) ^ 2))
-```
-
-```{r}
-sqrt(mean( (y_test - predict(fit_glmnet, newdata = x_test) ) ^ 2))
-```
 
 
 
