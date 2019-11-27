@@ -41,7 +41,7 @@ And then we'll load a bunch of other packages.
 ```{r}
 #Loading packages
 if (!require("pacman")) install.packages("pacman")
-<<<<<<< HEAD
+
 pacman::p_load(knitr, # For knitr to html
                rmarkdown, # For formatting the document
                tidyverse, # Standard datasciewnce toolkid (dplyr, ggplot2 et al.)
@@ -77,24 +77,7 @@ pacman::p_load(knitr, # For knitr to html
                yardstick,
                lda, # For LDA-analysis
                topicmodels, # LDA models
-               broom
-=======
-pacman::p_load(knitr,
-               readr,
-               rmarkdown, 
-               tidyverse,
-               tidytext,
-               dplyr,
-               broom,
-               keras,
-               drat,
-               reticulate,
-               SciencesPo,
-               caret,
-               textstem,
-               recipes
->>>>>>> parent of 13d39ea... Update Project.Rmd
-               )
+               broom)
 ```
 
 ## Data
@@ -266,10 +249,6 @@ reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/reviews_detailed
 glimpse(reviews)
 ```
 
-Tokenize and cleaning
-```{r}
-
-```
 
 
 ```{r}
