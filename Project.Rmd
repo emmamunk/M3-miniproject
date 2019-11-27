@@ -80,7 +80,7 @@ reviews = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb
 In the variable listings, there's a lof of variables. We have choosen some of them, including id, neighbourhood, room type, minimum nights, number of reviews, reviews per month, calculated host listings count and availability 365.
 
 ```{r}
-listings = listings %>% select(c(price, zipcode, room_type, accommodates, bathrooms, bedrooms, number_of_reviews, guests_included, review_scores_rating)) %>% filter(room_type %in% c("Entire home/apt", "Private room"))
+listings = listings %>% select(c(id, price, zipcode, room_type, accommodates, bathrooms, bedrooms, number_of_reviews, guests_included, review_scores_rating)) %>% filter(room_type %in% c("Entire home/apt", "Private room"))
 ```
 
 
@@ -135,21 +135,26 @@ ggcorr(listings)
 listings
 ```
 
+
+
+
 # Supervised machine learning
 
 We'll start by splitting the data into test and training.
 
 ```{r}
-index = createDataPartition(y = listings$price_intervals, p = 0.75, list = FALSE)
+listings_ml = listings %>% select(c(-price,-id))
 
-training = listings[index,] 
-test = listings[-index,] 
+index = createDataPartition(y = listings_ml$price_intervals, p = 0.75, list = FALSE)
+
+training = listings_ml[index,] 
+test = listings_ml[-index,] 
 ```
 
 
 
 ```{r}
-listings = listings %>% select(c(-price))
+
 
 reci = recipe(price_intervals ~ ., data = training) %>%
   step_center(all_numeric(), -all_outcomes()) %>% 
@@ -160,6 +165,8 @@ reci = reci %>% step_knnimpute(all_predictors())
 
 reci = reci %>% prep(data = training)
 ```
+
+
 
 ```{r}
 reci
@@ -265,6 +272,16 @@ plot(fit.nnet)
 
 Data preprocessing NLP
 
+
+```{r}
+
+listings_nlp = listings %>% select(c(price_intervals, id))
+x = listings %>% select(c(price_intervals))
+
+
+y = merge(x = reviews_tidy, y = listings_nlp, by.x = c("id",""))
+```
+
 Loading in the review dataset locally:
 After loading we want to take a glimpse on how the dataset is looking. For this we use the function 'glimpse', to give an overview of which variables the dataset contains.
 ```{r}
@@ -292,11 +309,11 @@ reviews_tidy %>%
 own_stopwords <- tibble(c("2","10","5","7","3","15"),
                         lexicon = "OWN")
 #Removing theese homemade stopwords, but also cleaning for general stopwords such as the, as, a and  etc.
-reviews_tidy %<>%
+reviews_tidy = reviews_tidy %>%
   anti_join(stop_words %>% bind_rows(own_stopwords), by = "word")
 
 #Removing all numbers and special characters and removing words who only contain one letter
-reviews_tidy %<>%
+reviews_tidy = reviews_tidy %>%
   mutate(word = word %>% str_remove_all("[^[:alnum:]]") ) %>%
     mutate(word = word %>% str_remove_all("[^a-zA-Z]")) %>%
   filter(str_length(word) > 1)
