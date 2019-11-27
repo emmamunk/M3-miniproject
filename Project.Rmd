@@ -273,15 +273,6 @@ plot(fit.nnet)
 Data preprocessing NLP
 
 
-```{r}
-
-listings_nlp = listings %>% select(c(price_intervals, id))
-x = listings %>% select(c(price_intervals))
-
-
-y = merge(x = reviews_tidy, y = listings_nlp, by.x = c("id",""))
-```
-
 Loading in the review dataset locally:
 After loading we want to take a glimpse on how the dataset is looking. For this we use the function 'glimpse', to give an overview of which variables the dataset contains.
 ```{r}
@@ -298,7 +289,7 @@ To clean up the data we are using lemmatization. The purpose of this is to not o
 #Unnest the comments and lemmatize the words
 reviews_tidy <- reviews %>% 
   unnest_tokens(word, comments) %>% 
-  count(id, word, sort = TRUE) %>% 
+  count(listing_id, word, sort = TRUE) %>% 
   mutate(word = lemmatize_words(word))
 
 #Defining the number of times a word is used the comments
@@ -375,8 +366,60 @@ We see that in general that negative words aren't represented so much as the pos
 
 
 
+#RNN
+
+```{r}
+listings <- listings %>% 
+  rename(
+    listing_id = id
+    )
+data <- left_join(reviews, listings, by = "listing_id")
+
+data <- data %>% 
+  select(comments, price_intervals)
+```
+
+```{r}
+index1 <- createDataPartition(y = data$price_intervals, p = 0.75, list = FALSE)
+
+training_price = data[index1,] 
+test_price = data[-index1,] 
 
 
+
+
+max_len <- 50
+batch_size <- 32
+total_epochs <- 15
+```
+
+The last step before testing our model is to compile it, and specify what the loss and optimzer should be as what metric to track:
+# Optimizer
+We are choosing 'rmsprop' which looks back at the general direction of the changes its made previously in order to decide what the next change should be. It's particularly well suited to RNNs.
+# Loss
+Here, we're going to use "binary crossentropy", which means that we want our model to accurately reflect the probability that an observation will fall into one of two groups.
+# Metrics
+This argument is optional, but it will tell our model what, in addition to the loss, it should track while it trains. We are going to ask for accuracy so that we can look how accuracy changes as our model trains.
+
+```{r}
+model <- keras_model_sequential() %>%
+  layer_embedding(input_dim = 89833, output_dim = 32) %>%
+  layer_simple_rnn(units = 32) %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+
+summary(model)
+
+model %>% compile(loss = 'binary_crossentropy', 
+                  optimizer = 'RMSprop', 
+                  metrics = c('accuracy'))
+trained_model <- model %>% fit(
+    x = training_price, # sequence we're using for prediction 
+    y = test_price, # sequence we're predicting
+    batch_size = batch_size, # how many samples to pass to our model at a time
+    epochs = total_epochs, # how many times we'll look @ the whole dataset
+    validation_split = 0.1) # how much data to hold out for testing as we go along
+
+```
 
 
 
