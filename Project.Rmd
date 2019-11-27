@@ -41,20 +41,42 @@ And then we'll load a bunch of other packages.
 ```{r}
 #Loading packages
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(knitr,
-               readr,
-               rmarkdown, 
-               tidyverse,
-               tidytext,
-               plyr,
-               dplyr,
+pacman::p_load(knitr, # For knitr to html
+               rmarkdown, # For formatting the document
+               tidyverse, # Standard datasciewnce toolkid (dplyr, ggplot2 et al.)
+               data.table, # for reading in data ect. 
+               magrittr,# For advanced piping (%>% et al.)
+               igraph, # For network analysis
+               tidygraph, # For tidy-style graph manipulation
+               ggraph, # For ggplot2 style graph plotting
+               Matrix, # For some matrix functionality
+               ggforce, # Awesome plotting
+               kableExtra, # Formatting for tables
+               car, # recode functions 
+               tidytext, # Structure text within tidyverse
+               topicmodels, # For topic modelling
+               tm, # text mining library
+               quanteda, # for LSA (latent semantic analysis)
+               uwot, # for UMAP
+               dbscan, # for density based clustering
+               SnowballC,
+               textdata,
+               wordcloud, 
+               textstem, # for textstemming 
+               tidyr,
+               widyr,
+               reshape2,
+               quanteda,
+               uwot,
+               dbscan,
+               plotly,
+               rsample,
+               glmnet,
                broom,
-               keras,
-               drat,
-               reticulate,
-               caret,
-               textstem,
-               recipes
+               yardstick,
+               lda, # For LDA-analysis
+               topicmodels, # LDA models
+               broom
                )
 ```
 
@@ -228,6 +250,31 @@ glimpse(reviews)
 ```
 
 Tokenize and cleaning
+```{r}
+tokens_clean <- reviews %>% 
+  unnest_tokens(word, comments, to_lower = TRUE) %>% 
+  mutate(word = word %>% str_remove_all("[^a-zA-Z]")) %>%
+  filter(str_length(word) > 1) %>% 
+  mutate(word = lemmatize_words(word))
+
+reviewtext_lemma <- tokens_clean %>% 
+  group_by(id) %>% 
+  summarize(comments = str_c(word, collapse = " ")) %>% 
+  ungroup() %>% 
+  select(comments) %>% 
+  as_vector()
+
+data_clean <- reviews %>%
+  mutate(comments = reviewtext_lemma)
+
+tokens_nlp <- tokens_clean %>% anti_join(stop_words)
+
+tokens_nlp %>% 
+  count(word)
+
+```
+
+
 ```{r}
 reviews_tidy <- reviews %>% 
   unnest_tokens(word, comments) %>% 
