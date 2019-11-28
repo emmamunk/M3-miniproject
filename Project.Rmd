@@ -366,7 +366,8 @@ We see that in general that negative words aren't represented so much as the pos
 
 
 
-#RNN
+#Creating a simple Recurrent Neural Network model
+
 
 ```{r}
 listings <- listings %>% 
@@ -375,22 +376,98 @@ listings <- listings %>%
     )
 data <- left_join(reviews, listings, by = "listing_id")
 
+
 data <- data %>% 
-  select(comments, price_intervals)
+  select(comments, price_intervals, listing_id) %>%
+  na.omit()
 ```
 
 ```{r}
 index1 <- createDataPartition(y = data$price_intervals, p = 0.75, list = FALSE)
 
-training_price = data[index1,] 
-test_price = data[-index1,] 
+training_price <- data[index1,] 
+test_price <- data[-index1,] 
+
+```
+
+```{r}
+#Unnest the comments and lemmatize the words
+training_tidy <- training_price %>% 
+  unnest_tokens(word, comments) %>% 
+  count(listing_id, word, sort = TRUE) %>% 
+  mutate(word = lemmatize_words(word))
+
+#Defining own stopwords, that isn't relevant for the analysis
+own_stopwords <- tibble(c("2","10","5","7","3","15"),
+                        lexicon = "OWN")
+#Removing theese homemade stopwords, but also cleaning for general stopwords such as the, as, a and  etc.
+training_tidy <- training_tidy %>%
+  anti_join(stop_words %>% bind_rows(own_stopwords), by = "word")
+
+#Removing all numbers and special characters and removing words who only contain one letter
+training_tidy <- training_tidy %>%
+  mutate(word = word %>% str_remove_all("[^[:alnum:]]") ) %>%
+    mutate(word = word %>% str_remove_all("[^a-zA-Z]")) %>%
+  filter(str_length(word) > 1)
+
+
+#Unnest the comments and lemmatize the words
+test_tidy <- test_price %>% 
+  unnest_tokens(word, comments) %>% 
+  count(listing_id, word, sort = TRUE) %>% 
+  mutate(word = lemmatize_words(word))
+
+#Removing theese homemade stopwords, but also cleaning for general stopwords such as the, as, a and  etc.
+test_tidy <- test_tidy %>%
+  anti_join(stop_words %>% bind_rows(own_stopwords), by = "word")
+
+#Removing all numbers and special characters and removing words who only contain one letter
+test_tidy <- test_tidy %>%
+  mutate(word = word %>% str_remove_all("[^[:alnum:]]") ) %>%
+    mutate(word = word %>% str_remove_all("[^a-zA-Z]")) %>%
+  filter(str_length(word) > 1)
+```
+
+
+```{r}
+max_features <- 10000
+#Training
+tokenizer_training <- text_tokenizer(num_words = max_features)
+
+
+tokenizer_training %>% 
+  fit_text_tokenizer(training_tidy$word)
+
+tokenizer_training$document_count
+
+
+text_seqs_training <- texts_to_sequences(tokenizer_training, data$comments)
+
+text_seqs_training %>%
+  head()
+#Testing
+tokenizer_test <- text_tokenizer(num_words = max_features)
+
+
+tokenizer_test %>% 
+  fit_text_tokenizer(test_tidy$word)
+
+tokenizer_test$document_count
+
+
+text_seqs_test <- texts_to_sequences(tokenizer_test, data$comments)
+
+text_seqs_test %>%
+  head()
+```
 
 
 
 
-max_len <- 50
-batch_size <- 32
-total_epochs <- 15
+```{r}
+training_price <- pad_sequences(training_price, maxlen = 250)
+test_price <- pad_sequences(test_price, maxlen = 250)
+
 ```
 
 The last step before testing our model is to compile it, and specify what the loss and optimzer should be as what metric to track:
