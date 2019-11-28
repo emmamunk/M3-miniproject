@@ -13,11 +13,15 @@ output:
 ---
 # Introduction
 
-# Problem
+In this project, we'll test six different models to see which one performs better, and we espcially want to analyse whether advanced deep learning models perform better than simple models. We'll analyse Airbnb prices in Stockholm, Sweden, where we'll include numeric, categorical and text data.
 
 # Data desciption
 
-# Data preprocessing 
+We got our data over Airbnb rooms from https://www.kaggle.com/liubacuzacov/stockholm-sweden-airbnb-listings. They got their data from http://insideairbnb.com/get-the-data.html. Here we load two different files, one for listings details and one for reviews. The one with listings details contains around 7800 observations and 106 variables. The one with reviews has around 119000 observations. 
+
+# Data cleaning
+
+Before starting working on the models, we have to do some data cleaning. 
 
 ## Load libaries
 
@@ -56,18 +60,22 @@ pacman::p_load(knitr,
                recipes,
                MLmetrics,
                e1071,
-               GGally
+               GGally,
+               ranger,
+               nnet
                )
 ```
 
 ## Data
 
-And now we can download the data from the Github.
+And now we can download the data from the Github. We have loaded it in locally. This can be problematic, as it is harder for you to look at the data. However, I was not possibly to load it via Github.
 
 ```{r}
-listings <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/listings_detailed.csv")
+listings <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/listings.csv")
 reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/reviews_detailed.csv")
 ```
+
+
 
 ```{r}
 listings = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb-listings/listings_detailed.csv")
@@ -75,47 +83,79 @@ listings = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbn
 reviews = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb-listings/reviews_detailed.csv")
 ```
 
+```{r}
+reviews = reviews %>% mutate(year = str_detect(date, pattern = "2015")) %>% filter(year == TRUE) %>% select(c(-year))
+```
+
+
 ## Data preprocessing
 
-In the variable listings, there's a lof of variables. We have choosen some of them, including id, neighbourhood, room type, minimum nights, number of reviews, reviews per month, calculated host listings count and availability 365.
+In the variable listings, there's a lof of variables. We have choosen some of them, here id, zipcode, room type, accommodates, bathrooms, bedrooms, number of reviews, guist included and review score rating. We have choosen these, as we think these will help with the understanding of how price is defined. We have to make them all numeric and binary, as we'll have problems further in the assignment if we have categorically variables.
 
 ```{r}
 listings = listings %>% select(c(id, price, zipcode, room_type, accommodates, bathrooms, bedrooms, number_of_reviews, guests_included, review_scores_rating)) %>% filter(room_type %in% c("Entire home/apt", "Private room"))
 ```
 
+### Airbnb price
+
+Our dependent variables is Airbnb price. 
+
+The first thing, we'll do is making the price numeric and removing the dollar sign in front of it.
 
 ```{r}
 listings$price = as.numeric(gsub('[$,]', '', listings$price))
 ```
 
+In this project, we want to look at catogorical variables. Here we set the max price to 5500 dollars and split by 500, so we'll get 11 intervals. We had some outliers with higher prices, but they only had 1 or 2 observations, so we decided to remove them.
+
 ```{r}
 listings$price_intervals = cut(listings$price, c(0, seq(500, 5500, by=500)))
 ```
+
+Adn then we'll make the price intervals numeric.
 
 ```{r}
 listings$price_intervals = as.numeric(listings$price_intervals)
 ```
 
+And now we have to change the names, as the models will not run to names, unfortunately.
 
 ```{r}
-listings$price_intervals[listings$price_intervals == "1"] = "A" 
-listings$price_intervals[listings$price_intervals == "2"] = "B"
-listings$price_intervals[listings$price_intervals == "3"] = "C"
-listings$price_intervals[listings$price_intervals == "4"] = "D"
-listings$price_intervals[listings$price_intervals == "5"] = "E"
-listings$price_intervals[listings$price_intervals == "6"] = "F"
-listings$price_intervals[listings$price_intervals == "7"] = "G"
-listings$price_intervals[listings$price_intervals == "8"] = "H"
-listings$price_intervals[listings$price_intervals == "9"] = "I"
-listings$price_intervals[listings$price_intervals == "10"] = "J"
-listings$price_intervals[listings$price_intervals == "11"] = "K"
+listings$price_intervals_ml[listings$price_intervals == "1"] = "A" 
+listings$price_intervals_ml[listings$price_intervals == "2"] = "B"
+listings$price_intervals_ml[listings$price_intervals == "3"] = "C"
+listings$price_intervals_ml[listings$price_intervals == "4"] = "D"
+listings$price_intervals_ml[listings$price_intervals == "5"] = "E"
+listings$price_intervals_ml[listings$price_intervals == "6"] = "F"
+listings$price_intervals_ml[listings$price_intervals == "7"] = "F"
+listings$price_intervals_ml[listings$price_intervals == "8"] = "F"
+listings$price_intervals_ml[listings$price_intervals == "9"] = "F"
+listings$price_intervals_ml[listings$price_intervals == "10"] = "F"
+listings$price_intervals_ml[listings$price_intervals == "11"] = "F"
+```
+
+```{r}
+listings$price_intervals_nlp[listings$price_intervals == "1"] = 1 
+listings$price_intervals_nlp[listings$price_intervals == "2"] = 2
+listings$price_intervals_nlp[listings$price_intervals == "3"] = 3
+listings$price_intervals_nlp[listings$price_intervals == "4"] = 4
+listings$price_intervals_nlp[listings$price_intervals == "5"] = 5
+listings$price_intervals_nlp[listings$price_intervals == "6"] = 6
+listings$price_intervals_nlp[listings$price_intervals == "7"] = 6
+listings$price_intervals_nlp[listings$price_intervals == "8"] = 6
+listings$price_intervals_nlp[listings$price_intervals == "9"] = 6
+listings$price_intervals_nlp[listings$price_intervals == "10"] = 6
+listings$price_intervals_nlp[listings$price_intervals == "11"] = 6
 ```
 
 
+As with price, we'll make the zipcodes numeric.
 
 ```{r}
 listings$zipcode = as.numeric(gsub('[ ]', '', listings$zipcode))
 ```
+
+There is all in all four different types of rooms, but shared rooms and hotel rooms were very small combined, so we decided only to look at entire home/apartments or private room and define the variable as a binary variable. Here entire home/apartment is equal to 1 and private room is equal to 0. 
 
 ```{r}
 listings$room_type = ifelse(listings$room_type == "Entire home/apt", 1, 0)
@@ -127,50 +167,49 @@ And then we'll remove NA's.
 listings = na.omit(listings)
 ```
 
+Now, we want to run a correlation matrix of the different variables to see how much the correlate.
+
 ```{r}
 ggcorr(listings)
 ```
+
+Here, it's especially interesting to see what variables price is correlated with. Here, especially accommodates and bedrooms are highly positive correlated and zipcode and number of reviews are slightly negative correlated. And now we can run how the listings look like. Here there's 7776 observatiosna and 10 variables.
 
 ```{r}
 listings
 ```
 
-
-
-
 # Supervised machine learning
 
-We'll start by splitting the data into test and training.
+## Training and test data set
+
+Here, we want to look at the listing and we're choosing not to look at price and id. 
 
 ```{r}
-listings_ml = listings %>% select(c(-price,-id))
+listings_ml = listings %>% select(c(-price,-id, -price_intervals_nlp))
+```
 
+We'll start by splitting the data into test and training. Here, we're doing a 75 percent split for the training data and a 25 percent split for the test data.
+
+```{r}
 index = createDataPartition(y = listings_ml$price_intervals, p = 0.75, list = FALSE)
 
 training = listings_ml[index,] 
 test = listings_ml[-index,] 
 ```
 
-
+Here, we're using the recipes package. It lets you conveniently define a recipe of standard ML preprocessing tasks. Afterwards, we can just can use this recipe to “bake” our data, meaning performing all the steps in the recipe.
 
 ```{r}
-
-
 reci = recipe(price_intervals ~ ., data = training) %>%
   step_center(all_numeric(), -all_outcomes()) %>% 
   step_scale(all_numeric(), -all_outcomes()) %>% 
   step_zv(all_predictors())
 
-reci = reci %>% step_knnimpute(all_predictors()) 
-
 reci = reci %>% prep(data = training)
 ```
 
-
-
-```{r}
-reci
-```
+Now we just split again in predictors and outcomes, bake it all, and we are good to go.
 
 ```{r}
 x_train = bake(reci, new_data = training) %>% select(-price_intervals) 
@@ -180,8 +219,10 @@ x_test = bake(reci, new_data = test) %>% select(-price_intervals)
 y_test =  test %>% pull(price_intervals) %>% as.factor()
 ```
 
+We now define a trainControl() object.
+
 ```{r}
-ctrl <- trainControl(method = "cv", 
+ctrl = trainControl(method = "cv", 
                      number = 10, 
                      classProbs = TRUE, 
                      savePredictions = TRUE, 
@@ -197,8 +238,14 @@ metric <- "Accuracy"
 n_tune = 10 
 ```
 
+And then we can train our models. 
+
+## Decision tree
+
+We start with a decision tree.
+
 ```{r}
-fit_dt <- train(x = x_train, 
+fit_dt = train(x = x_train, 
                 y = y_train, 
                 trControl = ctrl, 
                 metric = metric,
@@ -210,34 +257,131 @@ fit_dt <- train(x = x_train,
 fit_dt
 ```
 
+## Random Forest
 ```{r}
-pred_dt <- predict(fit_dt, newdata = x_test)
+fit_rf <- train(x = x_train, 
+                y = y_train, 
+                trControl = ctrl,  
+                metric = metric,
+                tuneLength = n_tune,
+                method = "ranger", 
+                importance = "impurity",
+                num.trees = 25
+                )
 ```
 
 ```{r}
-pred_dt %>% head()
+fit_rf
+```
+
+
+## Evaluation of Supervised Machine Learning via final out-of-sample prediction
+
+```{r}
+pred_dt = predict(fit_dt, newdata = x_test)
 ```
 
 ```{r}
 confusionMatrix(pred_dt, y_test)
 ```
 
-
-# Mixed Input Model
+```{r}
+pred_rf = predict(fit_rf, newdata = x_test)
+```
 
 ```{r}
-fit.nnet <- train(price ~ ., training, 
+confusionMatrix(pred_rf, y_test)
+```
+
+# Simple Neural Network
+
+```{r}
+fit.nnet = train(price_intervals ~ ., training, 
               method='nnet', 
               trace = FALSE)
+```
 
+```{r}
 fit.nnet
 ```
 
 ```{r}
-plot(fit.nnet)
+pred_nnet = predict(fit.nnet, newdata = x_test)
+```
+
+```{r}
+confusionMatrix(pred_nnet, y_test)
 ```
 
 
+
+
+# Multi-layer Perceptron
+
+```{r}
+model = keras_model_sequential() %>%
+  layer_dense(units = 16, activation = "relu", input_shape = c("5686")) %>%
+  layer_dense(units = 6, activation = "softmax")
+```
+
+```{r}
+model %>% compile(
+  optimizer = "rmsprop",
+  loss = "categorical_crossentropy",
+  metrics = "accuracy"
+)
+```
+
+```{r}
+summary(model)
+```
+
+```{r}
+y_labels = as.numeric(y_train)
+```
+
+
+```{r}
+history = model %>% fit(
+  x_train,
+  y_labels,
+  epochs = 10,
+  batch_size = 512,
+  validation_split = 0.25
+)
+```
+
+```{r}
+y_train
+```
+
+
+# Mixed Input Model
+
+```{r}
+# Numeric and categorical model
+bi_input = layer_input(shape = c(5))
+
+# Text model
+main_input = layer_input(shape = c(250))
+
+text_out = main_input %>% 
+  layer_embedding(input_dim = 10000, output_dim = 512, input_length = 100) %>% 
+  layer_lstm(units = 100)
+
+# Mix layer
+main_output = layer_concatenate(c(text_out, bi_input)) %>%  
+  layer_dense(units = 64, activation = 'relu') %>% 
+  layer_dense(units = 64, activation = 'relu') %>% 
+  layer_dense(units = 64, activation = 'relu') %>% 
+  layer_dense(units = 6, activation = 'softmax')
+
+# Model
+model = keras_model(
+  inputs = c(main_input, bi_input), 
+  outputs = c(main_output)
+)
+```
 
 
 
@@ -370,29 +514,63 @@ We see that in general that negative words aren't represented so much as the pos
 
 
 ```{r}
-listings <- listings %>% 
-  rename(
-    listing_id = id
-    )
+listings <- listings %>% rename(listing_id = id)
 data <- left_join(reviews, listings, by = "listing_id")
 
-
 data <- data %>% 
-  select(comments, price_intervals, listing_id) %>%
+  select(comments, price_intervals_nlp, listing_id) %>%
   na.omit()
+
+
+
 ```
 
 ```{r}
-index1 <- createDataPartition(y = data$price_intervals, p = 0.75, list = FALSE)
+index1 <- createDataPartition(y = data$price_intervals_nlp, p = 0.75, list = FALSE)
 
-training_price <- data[index1,] 
-test_price <- data[-index1,] 
+training <- data[index1,] 
+test <- data[-index1,] 
 
+# Price intervals (y)
+training_price = training$price_intervals_nlp
+test_price = test$price_intervals_nlp
+
+# Comments intervals (x)
+training_comments = training$comments
+test_comments = test$comments
 ```
+
+```{r}
+max_features = 2000
+tokenizer = text_tokenizer(num_words = max_features,
+  filters = "!\"#$%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n",
+  lower = TRUE, split = " ", char_level = FALSE)
+```
+
+Here I update the tokenizer internal vocabulary based on tweets.
+
+```{r}
+keras::fit_text_tokenizer(tokenizer, training_comments)
+```
+
+```{r}
+tweet_tokenizer = keras::texts_to_sequences(tokenizer, training_comments)
+```
+
+And then we can look at the first six tweets and how the words now take numeric values.
+
+```{r}
+keras::fit_text_tokenizer(tokenizer, test_comments)
+```
+
+```{r}
+tweet_tokenizer2 = keras::texts_to_sequences(tokenizer, test_comments)
+```
+
 
 ```{r}
 #Unnest the comments and lemmatize the words
-training_tidy <- training_price %>% 
+training_tidy <- training_comments %>% 
   unnest_tokens(word, comments) %>% 
   count(listing_id, word, sort = TRUE) %>% 
   mutate(word = lemmatize_words(word))
@@ -412,7 +590,7 @@ training_tidy <- training_tidy %>%
 
 
 #Unnest the comments and lemmatize the words
-test_tidy <- test_price %>% 
+test_tidy <- test_comments %>% 
   unnest_tokens(word, comments) %>% 
   count(listing_id, word, sort = TRUE) %>% 
   mutate(word = lemmatize_words(word))
@@ -445,6 +623,7 @@ text_seqs_training <- texts_to_sequences(tokenizer_training, data$comments)
 
 text_seqs_training %>%
   head()
+
 #Testing
 tokenizer_test <- text_tokenizer(num_words = max_features)
 
@@ -461,14 +640,13 @@ text_seqs_test %>%
   head()
 ```
 
-
-
-
 ```{r}
-training_pad <- pad_sequences(text_seqs_training, maxlen = 250)
-test_pad <- pad_sequences(text_seqs_test, maxlen = 250)
+x_train <- pad_sequences(tweet_tokenizer, maxlen = 100)
+x_test <- pad_sequences(tweet_tokenizer2, maxlen = 100)
 
+dim(x_train)
 ```
+
 
 The last step before testing our model is to compile it, and specify what the loss and optimzer should be as what metric to track:
 # Optimizer
@@ -480,21 +658,23 @@ This argument is optional, but it will tell our model what, in addition to the l
 
 ```{r}
 model <- keras_model_sequential() %>%
-  layer_embedding(input_dim = 10000, output_dim = 250) %>%
-  layer_simple_rnn(units = 250) %>% 
-  layer_dense(units = 6, activation = "softmax")
+  layer_embedding(input_dim = 2000, output_dim = 100) %>%
+  layer_simple_rnn(units = 100, return_sequences = TRUE) %>% 
+  layer_simple_rnn(units = 50, return_sequences = FALSE) %>%
+  layer_dense(units = 7, activation = "softmax")
 
 summary(model)
 
-model %>% compile(loss = 'binary_crossentropy', 
+model %>% compile(loss = 'sparse_categorical_crossentropy', 
                   optimizer = 'RMSprop', 
                   metrics = c('accuracy'))
+
 trained_model <- model %>% fit(
-    x = training_pad, # sequence we're using for prediction 
-    y = test_pad, # sequence we're predicting
-    batch_size = 32, # how many samples to pass to our model at a time
+    x = x_train, # sequence we're using for prediction 
+    y = training_price, # sequence we're predicting
+    batch_size = 2048, # how many samples to pass to our model at a time
     epochs = 10, # how many times we'll look @ the whole dataset
-    validation_split = 0.25) # how much data to hold out for testing as we go along
+    validation_split = 0.10) # how much data to hold out for testing as we go along
 
 ```
 
