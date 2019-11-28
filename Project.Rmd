@@ -17,7 +17,7 @@ In this project, we'll test six different models to see which one performs bette
 
 # Data desciption
 
-We got our data over Airbnb rooms from https://www.kaggle.com/liubacuzacov/stockholm-sweden-airbnb-listings. They got their data from http://insideairbnb.com/get-the-data.html. Here we load two different files, one for listings details and one for reviews. The one with listings details contains around 7800 observations and 106 variables. The one with reviews has around 119000 observations. 
+We got our data over Airbnb rooms from https://www.kaggle.com/liubacuzacov/stockholm-sweden-airbnb-listings. They got their data from http://insideairbnb.com/get-the-data.html. Here we load two different files, one for listings details and one for reviews. The one with listings details contains around 7800 observations and 106 variables. The one with reviews has around 119000 observations, and therefore we had to cut it down, but more on that later.
 
 # Data cleaning
 
@@ -27,7 +27,7 @@ Before starting working on the models, we have to do some data cleaning.
 
 We start by cleaning the environment.
 
-```{r, include=FALSE}
+```{r}
 #Cleaning the environment
 rm(list=ls())
 ```
@@ -77,11 +77,13 @@ reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/reviews_detailed
 
 
 
-```{r}
+```{r, include=FALSE}
 listings = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb-listings/listings_detailed.csv")
 
 reviews = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb-listings/reviews_detailed.csv")
 ```
+
+After loading reviews, we had to cut it, as we had problems running some models with this much data. To get a samlpe, which wouldn't be biased, we choose the year 2015, as this year was around 10000 observations.
 
 ```{r}
 reviews = reviews %>% mutate(year = str_detect(date, pattern = "2015")) %>% filter(year == TRUE) %>% select(c(-year))
@@ -93,12 +95,14 @@ reviews = reviews %>% mutate(year = str_detect(date, pattern = "2015")) %>% filt
 In the variable listings, there's a lof of variables. We have choosen some of them, here id, zipcode, room type, accommodates, bathrooms, bedrooms, number of reviews, guist included and review score rating. We have choosen these, as we think these will help with the understanding of how price is defined. We have to make them all numeric and binary, as we'll have problems further in the assignment if we have categorically variables.
 
 ```{r}
-listings = listings %>% select(c(id, price, zipcode, room_type, accommodates, bathrooms, bedrooms, number_of_reviews, guests_included, review_scores_rating)) %>% filter(room_type %in% c("Entire home/apt", "Private room"))
+listings = listings %>% select(c(id, price, zipcode, room_type, accommodates, bathrooms, bedrooms, number_of_reviews, guests_included, review_scores_rating))
 ```
+
+### Id
 
 ### Airbnb price
 
-Our dependent variables is Airbnb price. 
+Our dependent variables is Airbnb price. We have choosen to look at a Classification problem to see how good the models will perform in predicting the price of a room, where price is categorized into six classes.
 
 The first thing, we'll do is making the price numeric and removing the dollar sign in front of it.
 
@@ -106,7 +110,7 @@ The first thing, we'll do is making the price numeric and removing the dollar si
 listings$price = as.numeric(gsub('[$,]', '', listings$price))
 ```
 
-In this project, we want to look at catogorical variables. Here we set the max price to 5500 dollars and split by 500, so we'll get 11 intervals. We had some outliers with higher prices, but they only had 1 or 2 observations, so we decided to remove them.
+In this project, we want to look at catogorical variables. Here we set the max price to 5500 dollars and split by 500, so we'll get 11 intervals. We had some outliers with higher prices, but they only had 1 or 2 observations, so we decided to remove them. We removed outliers, where the maximum price is 5500 dollars.
 
 ```{r}
 listings$price_intervals = cut(listings$price, c(0, seq(500, 5500, by=500)))
@@ -118,9 +122,10 @@ Adn then we'll make the price intervals numeric.
 listings$price_intervals = as.numeric(listings$price_intervals)
 ```
 
-And now we have to change the names, as the models will not run to names, unfortunately.
+And now we have to change the names, as the models will not run to names, unfortunately. therefore we made two different new variables, one where they are classified as letters, running from A to F. And after that we made six classes running from number 1 to 6. Here everything above 3000 dollars is classified as F and 6, as the classes got smaller and smaller. We still have a very biased data set, where class 2 or B hav around 41 percent of the data, which may cause our models to perform worse compared to if it was equally distributed. First the price interval as letters.
 
 ```{r}
+#Price intervals as letters
 listings$price_intervals_ml[listings$price_intervals == "1"] = "A" 
 listings$price_intervals_ml[listings$price_intervals == "2"] = "B"
 listings$price_intervals_ml[listings$price_intervals == "3"] = "C"
@@ -134,7 +139,10 @@ listings$price_intervals_ml[listings$price_intervals == "10"] = "F"
 listings$price_intervals_ml[listings$price_intervals == "11"] = "F"
 ```
 
+And then as numbers.
+
 ```{r}
+#Price intervals as numbers
 listings$price_intervals_nlp[listings$price_intervals == "1"] = 1 
 listings$price_intervals_nlp[listings$price_intervals == "2"] = 2
 listings$price_intervals_nlp[listings$price_intervals == "3"] = 3
@@ -148,6 +156,7 @@ listings$price_intervals_nlp[listings$price_intervals == "10"] = 6
 listings$price_intervals_nlp[listings$price_intervals == "11"] = 6
 ```
 
+### Zipcode
 
 As with price, we'll make the zipcodes numeric.
 
@@ -155,17 +164,48 @@ As with price, we'll make the zipcodes numeric.
 listings$zipcode = as.numeric(gsub('[ ]', '', listings$zipcode))
 ```
 
+
+
+### Room type
+
 There is all in all four different types of rooms, but shared rooms and hotel rooms were very small combined, so we decided only to look at entire home/apartments or private room and define the variable as a binary variable. Here entire home/apartment is equal to 1 and private room is equal to 0. 
+
+```{r}
+listings = listings %>% filter(room_type %in% c("Entire home/apt", "Private room"))
+```
+
+And now we can define the binary room type.
 
 ```{r}
 listings$room_type = ifelse(listings$room_type == "Entire home/apt", 1, 0)
 ```
 
-And then we'll remove NA's.
+And look at the distibution.
 
 ```{r}
-listings = na.omit(listings)
+table(listings$room_type)
 ```
+
+Here we can see that 4707 of the rooms are entire houses or apartments, while 979 are 
+
+### Accommodates
+
+
+
+### Bathrooms
+
+### Bedrooms
+
+### Number of reviews
+
+### Guest included
+
+### Review scores rating
+
+
+And then we'll remove NA's.
+
+
 
 Now, we want to run a correlation matrix of the different variables to see how much the correlate.
 
@@ -488,8 +528,8 @@ We see that in general that negative words aren't represented so much as the pos
 
 
 ```{r}
-listings <- listings %>% rename(listing_id = id)
-data <- left_join(reviews, listings, by = "listing_id")
+listings1 <- listings %>% rename(listing_id = id)
+data <- left_join(reviews, listings1, by = "listing_id")
 
 data <- data %>% 
   select(comments, price_intervals_nlp, listing_id) %>%
@@ -615,10 +655,8 @@ text_seqs_test %>%
 ```
 
 ```{r}
-x_train <- pad_sequences(tweet_tokenizer, maxlen = 100)
+x_train_nlp <- pad_sequences(tweet_tokenizer, maxlen = 100)
 x_test <- pad_sequences(tweet_tokenizer2, maxlen = 100)
-
-dim(x_train)
 ```
 
 
@@ -634,6 +672,7 @@ This argument is optional, but it will tell our model what, in addition to the l
 model <- keras_model_sequential() %>%
   layer_embedding(input_dim = 2000, output_dim = 100) %>%
   layer_simple_rnn(units = 100, return_sequences = TRUE) %>% 
+  layer_dropout(0.2) %>%
   layer_simple_rnn(units = 50, return_sequences = FALSE) %>%
   layer_dense(units = 7, activation = "softmax")
 
@@ -644,38 +683,56 @@ model %>% compile(loss = 'sparse_categorical_crossentropy',
                   metrics = c('accuracy'))
 
 trained_model <- model %>% fit(
-    x = x_train, # sequence we're using for prediction 
+    x = x_train_nlp, # sequence we're using for prediction 
     y = training_price, # sequence we're predicting
-    batch_size = 2048, # how many samples to pass to our model at a time
+    batch_size = 1024, # how many samples to pass to our model at a time
     epochs = 10, # how many times we'll look @ the whole dataset
     validation_split = 0.10) # how much data to hold out for testing as we go along
 
 ```
 
+```{r}
+dim(listings_ml)
+```
+
+
 # Mixed Input Model
 
 ```{r}
+model = keras_model_sequential() %>%
+  layer_dense(units = 16, activation = "relu", input_shape = c("5686")) %>%
+  layer_dense(units = 6, activation = "softmax")
+```
 
+```{r}
+listings
 ```
 
 
 ```{r}
 # Numeric and categorical model
-bi_input = layer_input(shape = c(5))
+bi_input = layer_input(shape = c(100))
+
+#bi_output = layer_input %>%
+  #layer()
+  #layer_dense(units = 64, activation = 'relu')
 
 # Text model
-main_input = layer_input(shape = c(250))
+main_input = layer_input(shape = c(100))
+
+
 
 text_out = main_input %>% 
-  layer_embedding(input_dim = 10000, output_dim = 512, input_length = 100) %>% 
-  layer_lstm(units = 100)
+  layer_embedding(input_dim = 2000, output_dim = 512, input_length = 100) %>% 
+  layer_lstm(units = 32)
 
 # Mix layer
 main_output = layer_concatenate(c(text_out, bi_input)) %>%  
   layer_dense(units = 64, activation = 'relu') %>% 
   layer_dense(units = 64, activation = 'relu') %>% 
   layer_dense(units = 64, activation = 'relu') %>% 
-  layer_dense(units = 6, activation = 'softmax')
+  layer_dropout(0.2) %>%
+  layer_dense(units = 7, activation = 'softmax')
 
 # Model
 model = keras_model(
@@ -684,5 +741,38 @@ model = keras_model(
 )
 ```
  
+```{r}
+summary(model)
+```
+
+```{r}
+model %>% compile(loss = 'sparse_categorical_crossentropy', 
+                  optimizer = 'RMSprop', 
+                  metrics = c('accuracy'))
+```
+
+```{r}
+dim(x_train)
+```
+
+
+```{r}
+x = as.matrix(x_train_nlp)
+```
+
+
+```{r}
+model %>% fit(
+  x = list(x_train_nlp, x),
+  y = training_price,
+  epochs = 10,
+  batch_size = 64,
+  validation_split = 0.25
+)
+```
+
+
+
+
 
 
