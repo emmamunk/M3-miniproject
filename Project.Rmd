@@ -356,32 +356,6 @@ y_train
 ```
 
 
-# Mixed Input Model
-
-```{r}
-# Numeric and categorical model
-bi_input = layer_input(shape = c(5))
-
-# Text model
-main_input = layer_input(shape = c(250))
-
-text_out = main_input %>% 
-  layer_embedding(input_dim = 10000, output_dim = 512, input_length = 100) %>% 
-  layer_lstm(units = 100)
-
-# Mix layer
-main_output = layer_concatenate(c(text_out, bi_input)) %>%  
-  layer_dense(units = 64, activation = 'relu') %>% 
-  layer_dense(units = 64, activation = 'relu') %>% 
-  layer_dense(units = 64, activation = 'relu') %>% 
-  layer_dense(units = 6, activation = 'softmax')
-
-# Model
-model = keras_model(
-  inputs = c(main_input, bi_input), 
-  outputs = c(main_output)
-)
-```
 
 
 
@@ -678,6 +652,37 @@ trained_model <- model %>% fit(
 
 ```
 
+# Mixed Input Model
 
+```{r}
+
+```
+
+
+```{r}
+# Numeric and categorical model
+bi_input = layer_input(shape = c(5))
+
+# Text model
+main_input = layer_input(shape = c(250))
+
+text_out = main_input %>% 
+  layer_embedding(input_dim = 10000, output_dim = 512, input_length = 100) %>% 
+  layer_lstm(units = 100)
+
+# Mix layer
+main_output = layer_concatenate(c(text_out, bi_input)) %>%  
+  layer_dense(units = 64, activation = 'relu') %>% 
+  layer_dense(units = 64, activation = 'relu') %>% 
+  layer_dense(units = 64, activation = 'relu') %>% 
+  layer_dense(units = 6, activation = 'softmax')
+
+# Model
+model = keras_model(
+  inputs = c(main_input, bi_input), 
+  outputs = c(main_output)
+)
+```
+ 
 
 
