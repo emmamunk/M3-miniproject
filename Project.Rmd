@@ -68,11 +68,11 @@ pacman::p_load(knitr,
 
 ## Data
 
-And now we can download the data from the Github. We have loaded it in locally. This can be problematic, as it is harder for you to look at the data. However, I was not possibly to load it via Github.
+And now we can download the data from our own Github
 
 ```{r}
-listings <- read_csv("https://raw.githubusercontent.com/emmamunk/M3-miniproject/master/listings_detailed.csv")
-reviews <- read_csv("https://raw.githubusercontent.com/emmamunk/M3-miniproject/master/reviews_detailed.csv")
+listings = read_csv("https://raw.githubusercontent.com/emmamunk/M3-miniproject/master/listings_detailed.csv")
+reviews = read_csv("https://raw.githubusercontent.com/emmamunk/M3-miniproject/master/reviews_detailed.csv")
 ```
 
 After loading reviews, we had to cut it, as we had problems running some models with this much data. To get a samlpe, which wouldn't be biased, we choose the year 2015, as this year was around 10000 observations. We have to assume that this is representative for all reviews, as the models cannot run if we do it with all years. 
@@ -519,37 +519,45 @@ coord_flip() +
 labs(title ="Sentiment Word Counts",x ="Words")
 ```
 
-We see that in general that negative words aren't represented so much as the positive words in the Airbnb comments. Which seems kind odd, then comparing to the expectation beforehand. The reason to the odd distrubtion could be that........................................................................ 
+We see that in general that negative words aren't represented so much as the positive words in the Airbnb comments. Which seems kind odd, then comparing to the expectation beforehand.
 
 
 # A Simple Recurrent Neural Network model
 
+We start by changing the name of id in listings
+
 ```{r}
-listings <- listings %>% 
-  rename(
-    listing_id = id
-  )
+listings = listings %>% rename(listing_id = id)
 ```
 
+And then we can leftjoin the two data sets, here reviews and listings.
+
 ```{r}
-data <- left_join(reviews, listings, by = "listing_id")
+data = left_join(reviews, listings, by = "listing_id")
 ```
 
+And then we can select to lok at listing id, price intervals and comments.
+
 ```{r}
-data <- data %>% 
-  select(comments, price_intervals_nlp, listing_id) %>% 
-  na.omit()
+data = data %>% select(comments, price_intervals_nlp, listing_id) %>% na.omit()
 ```
 
-```{r}
-index1 <- createDataPartition(y = data$price_intervals_nlp, p = 0.8, list = FALSE)
+Then we can split the datset into test and training, here 25 percent and 75 percent.
 
-training <- data[index1,]
-test <- data[-index1,]
+```{r}
+index1 = createDataPartition(y = data$price_intervals_nlp, p = 0.75, list = FALSE)
+
+training = data[index1,]
+test = data[-index1,]
 ```
 
+As the data is very raw and messy, we now want to do some cleaning. We remove everything that isn't normal letters. Which is special characters, numbers and etc. Furthermore we will set all letters from the comments column to lower case.
+
+To clean up the data we are using lemmatization. The purpose of this is to not only analyze the exact word strings in the reviews, as this would include several possible forms of the words used. F. ex. think and thought. Instead we want to merge all possible forms of a word into it's root word. Lemmatization try and do so, by using detailed dictionaries which the algorithm looks trough to link a given word string back to it's root word. This is a more advanced method than stemming and should be beneficial in this report.
+
 ```{r}
-training_tidy <- training %>% 
+# Training data
+training_tidy = training %>% 
   unnest_tokens(word, comments) %>% 
   count(listing_id, word, sort = TRUE) %>% 
   mutate(word = lemmatize_words(word)) %>% 
@@ -558,7 +566,8 @@ training_tidy <- training %>%
   filter(str_length(word) > 1) %>% 
   anti_join(stop_words %>% bind_rows(own_stopwords), by = "word")
 
-test_tidy <- test %>% 
+#Test data
+test_tidy = test %>% 
   unnest_tokens(word, comments) %>% 
   count(listing_id, word, sort = TRUE) %>% 
   mutate(word = lemmatize_words(word)) %>% 
@@ -568,73 +577,130 @@ test_tidy <- test %>%
   anti_join(stop_words %>% bind_rows(own_stopwords), by = "word")
 ```
 
+We set max feautres to 10000, so it selects the first 10000 words.
+
 ```{r}
-max_features <- 10000
-tokenizer_train <- text_tokenizer(num_words = max_features)
-
-
-tokenizer_train %>% 
-  fit_text_tokenizer(training_tidy$word)
-
-tokenizer_train$document_count
-
-
-text_seqs_train <- texts_to_sequences(tokenizer_train, training$comments)
-
-text_seqs_train %>% 
-  head()
-#Test
-tokenizer_test <- text_tokenizer(num_words = max_features)
-
-
-tokenizer_test %>% 
-  fit_text_tokenizer(test_tidy$word)
-
-tokenizer_test$document_count
-
-
-text_seqs_test <- texts_to_sequences(tokenizer_test, test$comments)
-
-text_seqs_test %>% 
-  head()
-
+max_features = 10000
 ```
+
+And then we tokenize the text by max numbers, here 10000.
+
+```{r}
+tokenizer_train = text_tokenizer(num_words = max_features)
+```
+
+And then we fit it. 
+
+```{r}
+tokenizer_train %>% fit_text_tokenizer(training_tidy$word)
+```
+
+And then to a sequence.
+
+```{r}
+text_seqs_train = texts_to_sequences(tokenizer_train, training$comments)
+```
+
+And then for text.
+
+```{r}
+tokenizer_test = text_tokenizer(num_words = max_features)
+```
+
+And again fit it.
+
+```{r}
+tokenizer_test %>% fit_text_tokenizer(test_tidy$word)
+```
+
+And again to sequence.
+
+```{r}
+text_seqs_test = texts_to_sequences(tokenizer_test, test$comments)
+```
+
+Then max length of words is 100. 
 
 ```{r}
 maxlen = 100
+```
 
-train_pad <- pad_sequences(text_seqs_train, maxlen = maxlen)
-test_pad <- pad_sequences(text_seqs_test, maxlen = maxlen)
+And then we pad the sequences. 
 
+```{r}
+train_pad = pad_sequences(text_seqs_train, maxlen = maxlen)
+test_pad = pad_sequences(text_seqs_test, maxlen = maxlen)
+```
+
+And look at the dimensions.
+
+```{r}
 dim(train_pad)
+```
 
-model <- keras_model_sequential() %>%
+And then we can run the model. Here a simple RNN with some dropouts to compensate for overfitting.
+
+```{r}
+model = keras_model_sequential() %>%
   layer_embedding(input_dim = 10000, output_dim = 100) %>%
   layer_simple_rnn(units = 100) %>%
-  layer_dropout(0.5) %>% 
+  layer_dropout(0.2) %>% 
   layer_dense(units = 7, activation = "softmax")
+```
 
+And then we choose optimizer, loss and metrics. 
 
+```{r}
 model %>% compile(
   optimizer = "rmsprop",
   loss = "sparse_categorical_crossentropy",
-  metrics = "accuracy"
-)
-y <- as.numeric(training$price_intervals_nlp)
-trained_model <- model %>% fit(
-    x = train_pad, # sequence we're using for prediction 
-    y = y, # sequence we're predicting
-    batch_size = 256, # how many samples to pass to our model at a time
-    epochs = 10, # how many times we'll look @ the whole dataset
-    validation_split = 0.25)
-mean(trained_model$metrics$val_accuracy)
-
-
+  metrics = "accuracy")
 ```
+
+And then we have to tranform the price intervals to look at it as numeric.
+
+```{r}
+y = as.numeric(training$price_intervals_nlp)
+y1 = as.numeric(test$price_intervals_nlp)
+```
+
+And then we can run the model. Batch size is how many samples to pass to our model at a time where epochs is how many times we look at the whole dataset. Here we choose 256 and 10 for it to not run forever.
+
+```{r}
+trained_model = model %>% fit(
+    x = train_pad, 
+    y = y, 
+    batch_size = 256, 
+    epochs = 10, 
+    validation_split = 0.25)
+```
+
+Adn then we can look at how it performs.
+
+```{r}
+trained_model
+```
+It does not perform well on the validation test set, and therefore it may be overfitting. We have tried to play around with the dropout, but it still doesn't perform better. If we had more time, it may be performing better, but only looking at reviews, can not predict the price well into six classes. At least it performs worse than our other models and it cannot beat our bench model of 41 percent.
+
+## ## Evaluation of a Recurrent Neural Network via final out-of-sample prediction
+
+Let's look at how it performs on out-of-sample prediction.
+
+```{r}
+metrics = model %>% evaluate(test_pad, y1)
+```
+
+And then we can print the metrics. 
+
+```{r}
+metrics
+```
+
+As expected it performs badly on the test data as well. 
 
 # Mixed Input Model
 
-We wanted to experiment with a mixed input model, which is a model that draws from different data sources. Here, we're using  numeric and categorical data from listings and text data from reviews. We want to make a model that combines those two. We start by defining a new data set with the variables we need.
+We wanted to experiment with a mixed input model, which is a model that draws from different data sources. Here, we're using  numeric and categorical data from listings and text data from reviews. We want to make a model that combines those two. We start by defining a new data set with the variables we need. We have been using https://keras.rstudio.com/articles/functional_api.html?fbclid=IwAR2hqL5vif6bGDF_NddwvPE5_QhXlM-bUMk75yFLAq676ipuP35sRd44_LI as inspiration. 
 
 ```{r}
 listings_mim = listings %>% rename(listing_id = id)
