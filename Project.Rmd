@@ -75,7 +75,7 @@ listings <- read_csv("https://raw.githubusercontent.com/emmamunk/M3-miniproject/
 reviews <- read_csv("https://raw.githubusercontent.com/emmamunk/M3-miniproject/master/reviews_detailed.csv")
 ```
 
-After loading reviews, we had to cut it, as we had problems running some models with this much data. To get a samlpe, which wouldn't be biased, we choose the year 2015, as this year was around 10000 observations. We have to assume that this is representative for all reviews, as the models cannot run if we do it with all years. D
+After loading reviews, we had to cut it, as we had problems running some models with this much data. To get a samlpe, which wouldn't be biased, we choose the year 2015, as this year was around 10000 observations. We have to assume that this is representative for all reviews, as the models cannot run if we do it with all years. 
 
 ```{r}
 reviews = reviews %>% mutate(year = str_detect(date, pattern = "2015")) %>% filter(year == TRUE) %>% select(c(-year))
