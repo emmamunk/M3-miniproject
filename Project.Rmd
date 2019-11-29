@@ -68,7 +68,11 @@ pacman::p_load(knitr,
 
 ## Data
 
+<<<<<<< HEAD
 And now we can download the data from our own Github
+=======
+Now we can download the data from the Github. 
+>>>>>>> 733676b31d6153d3bfc0cf177023361535cbf5bb
 
 ```{r}
 listings = read_csv("https://raw.githubusercontent.com/emmamunk/M3-miniproject/master/listings_detailed.csv")
@@ -469,7 +473,7 @@ reviews_tidy = reviews_tidy %>%
   filter(str_length(word) > 1)
 ```
 
-After cleaning up the data, we can now look at which words are most represented in the comments. To do this we define a variable called topwords, which will be used to visualize it through a table and wordcloud
+After cleaning up the data, we can now look at which words are most represented in the comments. To do this we define a variable called topwords, which will be used to visualize it through a table.
 ```{r}
 #Defining the the topwords after cleaning
 topwords <- reviews_tidy %>%
@@ -498,7 +502,7 @@ We wil start with the Bing lexicon. The Bing lexicon categorizes words in a bina
 Now we are plotting a word count, grouped by sentiment, showing the 10 most frequent negative and positive words. 
 
 ```{r}
-sentiment_bing <- reviews_tidy %>% inner_join(get_sentiments("bing"))
+sentiment_bing = reviews_tidy %>% inner_join(get_sentiments("bing"))
 
 sentiment_analysis <- sentiment_bing %>% 
   filter(sentiment %in% c("positive", "negative"))
@@ -682,7 +686,7 @@ trained_model
 ```
 It does not perform well on the validation test set, and therefore it may be overfitting. We have tried to play around with the dropout, but it still doesn't perform better. If we had more time, it may be performing better, but only looking at reviews, can not predict the price well into six classes. At least it performs worse than our other models and it cannot beat our bench model of 41 percent.
 
-## ## Evaluation of a Recurrent Neural Network via final out-of-sample prediction
+## Evaluation of a Recurrent Neural Network via final out-of-sample prediction
 
 Let's look at how it performs on out-of-sample prediction.
 
@@ -696,14 +700,14 @@ And then we can print the metrics.
 metrics
 ```
 
-As expected it performs badly on the test data as well. 
+As expected it performs badly on the test data as well, here apround 33 percent.
 
 # Mixed Input Model
 
 We wanted to experiment with a mixed input model, which is a model that draws from different data sources. Here, we're using  numeric and categorical data from listings and text data from reviews. We want to make a model that combines those two. We start by defining a new data set with the variables we need. We have been using https://keras.rstudio.com/articles/functional_api.html?fbclid=IwAR2hqL5vif6bGDF_NddwvPE5_QhXlM-bUMk75yFLAq676ipuP35sRd44_LI as inspiration. 
 
 ```{r}
-listings_mim = listings %>% rename(listing_id = id)
+listings_mim = listings
 data = left_join(reviews, listings_mim, by = "listing_id")
 
 data_mim = data %>% 
@@ -804,11 +808,11 @@ tweet_tokenizer2 = keras::texts_to_sequences(tokenizer, test_comments)
 And then we're padding the sequence, here with a max length of 250 words.
 
 ```{r}
-x_train_nlp = pad_sequences(tweet_tokenizer, maxlen = 250)
-x_test_nlp = pad_sequences(tweet_tokenizer2, maxlen = 250)
+x_train_nlp = pad_sequences(tweet_tokenizer, maxlen = 100)
+x_test_nlp = pad_sequences(tweet_tokenizer2, maxlen = 100)
 ```
 
-And now we're defining the model. Here there's two input models, the numeric and categorical data from the listings data set with eight variables, and the text data from the reviews data set with a max length of 250. the text data will be trained a bit before in a LSTM, while the numeric data won't. We have played around with number of dense layers and dropouts to compensate for overfitting and performance. With more time, we're sure you could make a model that'll perform better. For the exam, we'll bring an image to show of the mixed input model, we didnøt have to time to make it for this. 
+And now we're defining the model. Here there's two input models, the numeric and categorical data from the listings data set with eight variables, and the text data from the reviews data set with a max length of 250. the text data will be trained a bit before in a LSTM, while the numeric data won't. We have played around with number of dense layers and dropouts to compensate for overfitting and performance. With more time, we're sure you could make a model that'll perform better. For the exam, we'll bring an image to show of the mixed input model, we didn't have to time to make it for this. 
 
 ```{r}
 # Numeric and categorical model
@@ -816,10 +820,10 @@ bi_input = layer_input(shape = c(8))
 
 
 # Text model
-main_input = layer_input(shape = c(250))
+main_input = layer_input(shape = c(100))
 
 text_out = main_input %>% 
-  layer_embedding(input_dim = 10000, output_dim = 512, input_length = 250) %>% 
+  layer_embedding(input_dim = 10000, output_dim = 512, input_length = 100) %>% 
   layer_lstm(units = 32)
 
 # Mix layer
@@ -871,19 +875,37 @@ model_mim = model %>% fit(
 )
 ```
 
+And then let's print it
+
+```{r}
+model_mim
+```
+
+As with the last model, it also looks like it's overfitting. the accuracy is high, but it cannot replicate the good results for the validation, which lies at 0.43 and therefore only slightly beats out model. 
+
+## Evaluation of a Mixed Input Model via final out-of-sample prediction
+
 And then we can test how well it performs on out test data. 
 
 ```{r}
 metrics = model %>% evaluate(list(x_test_nlp, x_test_ma), test_price)
 ```
 
-Adn again print a confusion matrix.
+And then we can print the metrics. 
 
 ```{r}
-confusionMatrix(pred_mim, y_test)
+metrics
 ```
 
+It performs better than the only text based model, but cannot beat simpler models. With some tuning, it might perform better.
 
+# Conclusion
+
+Overall the models perform with an accuracy spanding from 36 percent to 52 percent. Our goal was to beat an accuracy of 41 percent as that would be the results if you classified everything as class 2. 
+
+Unfortunately the models didn't perform as well as we thought, with the Decision Tree and Random Forest beating more complex models. Other models or finetuning of layers may change the result, but unfortunately we dind't have time to test every model our tune our models further. It often looks like it's overfitting, so if we could find a solution for this, the text based and deep learning models may perform better and beat out the simpler models. 
+
+We had some problems with how the distributions are. First of all, the price intervals are not equally distrbuted with class 2 being significat bigger than 
 
 
 
