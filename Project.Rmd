@@ -71,16 +71,8 @@ pacman::p_load(knitr,
 And now we can download the data from the Github. We have loaded it in locally. This can be problematic, as it is harder for you to look at the data. However, I was not possibly to load it via Github.
 
 ```{r}
-listings <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/listings.csv")
-reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/reviews_detailed.csv")
-```
-
-
-
-```{r, include=FALSE}
-listings = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb-listings/listings_detailed.csv")
-
-reviews = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb-listings/reviews_detailed.csv")
+listings <- read_csv("https://raw.githubusercontent.com/emmamunk/M3-miniproject/master/listings_detailed.csv")
+reviews <- read_csv("https://raw.githubusercontent.com/emmamunk/M3-miniproject/master/reviews_detailed.csv")
 ```
 
 After loading reviews, we had to cut it, as we had problems running some models with this much data. To get a samlpe, which wouldn't be biased, we choose the year 2015, as this year was around 10000 observations. We have to assume that this is representative for all reviews, as the models cannot run if we do it with all years. 
