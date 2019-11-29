@@ -667,12 +667,12 @@ x_test <- pad_sequences(tweet_tokenizer2, maxlen = 100)
 
 
 The last step before testing our model is to compile it, and specify what the loss and optimzer should be as what metric to track:
-# Optimizer
-We are choosing 'rmsprop' which looks back at the general direction of the changes its made previously in order to decide what the next change should be. It's particularly well suited to RNNs.
-# Loss
-Here, we're going to use "binary crossentropy", which means that we want our model to accurately reflect the probability that an observation will fall into one of two groups.
-# Metrics
-This argument is optional, but it will tell our model what, in addition to the loss, it should track while it trains. We are going to ask for accuracy so that we can look how accuracy changes as our model trains.
+
+* Optimizer: We are choosing 'rmsprop' which looks back at the general direction of the changes its made previously in order to decide what the next change should be. It's particularly well suited to RNNs.
+
+* Loss Here, we're going to use "binary crossentropy", which means that we want our model to accurately reflect the probability that an observation will fall into one of two groups.
+
+*Metrics: This argument is optional, but it will tell our model what, in addition to the loss, it should track while it trains. We are going to ask for accuracy so that we can look how accuracy changes as our model trains.
 
 ```{r}
 model <- keras_model_sequential() %>%
@@ -718,6 +718,7 @@ data_mim = data %>%
 Adn then we split the data set into test and training, here 25 percent and 75 percent. We also had to remove NA's again. 
 
 ```{r}
+#Overall
 index2 = createDataPartition(y = data_mim$price_intervals_nlp, p = 0.75, list = FALSE)
 
 training = data[index2,] 
