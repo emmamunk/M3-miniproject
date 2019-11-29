@@ -68,7 +68,7 @@ pacman::p_load(knitr,
 
 ## Data
 
-And now we can download the data from the Github. We have loaded it in locally. This can be problematic, as it is harder for you to look at the data. However, I was not possibly to load it via Github.
+Now we can download the data from the Github. 
 
 ```{r}
 listings <- read_csv("https://raw.githubusercontent.com/emmamunk/M3-miniproject/master/listings_detailed.csv")
