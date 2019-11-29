@@ -443,42 +443,9 @@ confusionMatrix(pred_nnet, y_test)
 
 On the test data, it is performing slightly better, but not as good as the Random Forest or Decision Tree. 
 
+# NLP 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-############################STOP HER EMMA!!!!!!!!!!!!!!!!!!!!!!####################################
-
-Data preprocessing NLP
-
+## Data preprocessing
 
 Loading in the review dataset locally:
 After loading we want to take a glimpse on how the dataset is looking. For this we use the function 'glimpse', to give an overview of which variables the dataset contains.
@@ -536,11 +503,11 @@ topwords %>%
 
 We see that the individual tokens that are most frequent are words such as "apartment", "stockholm" or names such as "clean", "comfortable", which describes how the Airbnb home is. 
 
-#Sentiment analysis
+## Sentiment analysis
 
 Sentiment analysis refers to a use of text analysis to extract and identify subjective information, where it analyzises whether the words are positive or negative. In this section, we will be doing two sentiment analysis, first by identifying positive and negative words using the bing lexicon and after this using the afinn lexicon. 
 
-## Bing
+### Bing
 We wil start with the Bing lexicon. The Bing lexicon categorizes words in a binary fashion as positive or negative with no weighting. Here, we are using the function get_sentiment to get a specific sentiment lexicon and inner_join to join the lexicon with tokenized data. 
 
 Now we are plotting a word count, grouped by sentiment, showing the 10 most frequent negative and positive words. 
@@ -570,10 +537,7 @@ labs(title ="Sentiment Word Counts",x ="Words")
 We see that in general that negative words aren't represented so much as the positive words in the Airbnb comments. Which seems kind odd, then comparing to the expectation beforehand. The reason to the odd distrubtion could be that........................................................................ 
 
 
-
-
-
-#Creating a simple Recurrent Neural Network model
+# A Simple Recurrent Neural Network model
 
 
 ```{r}
@@ -747,7 +711,7 @@ dim(listings_ml)
 
 # Mixed Input Model
 
-We wanted to experiment with a mixed input model, which is a model that draws from different data sources. Here, we're using  numeric and categorical data from listings and text data from reviews. We want to make a model that combines those two. 
+We wanted to experiment with a mixed input model, which is a model that draws from different data sources. Here, we're using  numeric and categorical data from listings and text data from reviews. We want to make a model that combines those two. We start by defining a new data set with the variables we need.
 
 ```{r}
 listings_mim = listings %>% rename(listing_id = id)
@@ -758,11 +722,13 @@ data_mim = data %>%
   na.omit()
 ```
 
-```{r}
-index2 <- createDataPartition(y = data_mim$price_intervals_nlp, p = 0.75, list = FALSE)
+Adn then we split the data set into test and training, here 25 percent and 75 percent. We also had to remove NA's again. 
 
-training <- data[index2,] 
-test <- data[-index2,] 
+```{r}
+index2 = createDataPartition(y = data_mim$price_intervals_nlp, p = 0.75, list = FALSE)
+
+training = data[index2,] 
+test = data[-index2,] 
 
 training = na.omit(training)
 test = na.omit(test)
@@ -771,10 +737,12 @@ test = na.omit(test)
 training_price = training$price_intervals_nlp
 test_price = test$price_intervals_nlp
 
-# Comments intervals (x)
+# Comments intervals
 training_comments = training$comments
 test_comments = test$comments
 ```
+
+And now we're going in to bake the training data for the numeric and categorical variables.
 
 ```{r}
 reci_mim = recipe(price_intervals_ml ~ zipcode + room_type + accommodates + bathrooms + bedrooms + number_of_reviews + guests_included + review_scores_rating, data = training)
@@ -811,60 +779,58 @@ metric = "Accuracy"
 n_tune = 10 
 ```
 
+Unfortunately, we did not have time to apply the tokenization from the NLP, which we guessed would have optimzed the model, so we're just using a simple text tokenizer from the Keras package with max features of 10000.
 
 ```{r}
-max_features = 2000
+max_features = 10000
 tokenizer = text_tokenizer(num_words = max_features,
   filters = "!\"#$%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n",
   lower = TRUE, split = " ", char_level = FALSE)
 ```
 
-Here I update the tokenizer internal vocabulary based on tweets.
+Here we update the tokenizer internal vocabulary based on training comments
 
 ```{r}
 keras::fit_text_tokenizer(tokenizer, training_comments)
 ```
 
+Adnt hen making it a sequence.
+
 ```{r}
 tweet_tokenizer = keras::texts_to_sequences(tokenizer, training_comments)
 ```
 
-And then we can look at the first six tweets and how the words now take numeric values.
+Adn then the same for the test data.
 
 ```{r}
 keras::fit_text_tokenizer(tokenizer, test_comments)
 ```
 
+And again, we're making it into a sequence
+
 ```{r}
 tweet_tokenizer2 = keras::texts_to_sequences(tokenizer, test_comments)
 ```
 
+And then we're padding the sequence, here with a max length of 250 words.
 
 ```{r}
-x_train_nlp = pad_sequences(tweet_tokenizer, maxlen = 100)
-x_test = pad_sequences(tweet_tokenizer2, maxlen = 100)
+x_train_nlp = pad_sequences(tweet_tokenizer, maxlen = 250)
+x_test_nlp = pad_sequences(tweet_tokenizer2, maxlen = 250)
 ```
 
-```{r}
-dim(x_train_nlp)
-```
-
+And now we're defining the model. Here there's two input models, the numeric and categorical data from the listings data set with eight variables, and the text data from the reviews data set with a max length of 250. the text data will be trained a bit before in a LSTM, while the numeric data won't. We have played around with number of dense layers and dropouts to compensate for overfitting and performance. With more time, we're sure you could make a model that'll perform better. For the exam, we'll bring an image to show of the mixed input model, we didnøt have to time to make it for this. 
 
 ```{r}
 # Numeric and categorical model
 bi_input = layer_input(shape = c(8))
 
-#bi_output = layer_input %>%
-  #layer()
-  #layer_dense(units = 64, activation = 'relu')
 
 # Text model
-main_input = layer_input(shape = c(100))
-
-
+main_input = layer_input(shape = c(250))
 
 text_out = main_input %>% 
-  layer_embedding(input_dim = 2000, output_dim = 512, input_length = 100) %>% 
+  layer_embedding(input_dim = 10000, output_dim = 512, input_length = 250) %>% 
   layer_lstm(units = 32)
 
 # Mix layer
@@ -883,9 +849,13 @@ model = keras_model(
 )
 ```
  
+ Then we'll run a summary to show.
+ 
 ```{r}
 summary(model)
 ```
+
+Adn choosing loss, optimizer and metrics.
 
 ```{r}
 model %>% compile(loss = 'sparse_categorical_crossentropy', 
@@ -893,14 +863,18 @@ model %>% compile(loss = 'sparse_categorical_crossentropy',
                   metrics = c('accuracy'))
 ```
 
+And last we had to transform our x_train into a matrix.
+
 ```{r}
-x = as.matrix(x_train)
+x_train_ma = as.matrix(x_train)
+x_test_ma = as.matrix(x_test)
 ```
 
+And now we can run the model. 
 
 ```{r}
-model %>% fit(
-  x = list(x_train_nlp, x),
+model_mim = model %>% fit(
+  x = list(x_train_nlp, x_train_ma),
   y = training_price,
   epochs = 10,
   batch_size = 256,
@@ -908,9 +882,17 @@ model %>% fit(
 )
 ```
 
+And then we can test how well it performs on out test data. 
 
+```{r}
+metrics = model %>% evaluate(list(x_test_nlp, x_test_ma), test_price)
+```
 
+Adn again print a confusion matrix.
 
+```{r}
+confusionMatrix(pred_mim, y_test)
+```
 
 
 
