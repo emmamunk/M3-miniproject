@@ -472,13 +472,6 @@ On the test data, it is performing slightly better, but not as good as the Rando
 Data preprocessing NLP
 
 
-Loading in the review dataset locally:
-After loading we want to take a glimpse on how the dataset is looking. For this we use the function 'glimpse', to give an overview of which variables the dataset contains.
-```{r}
-reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/reviews_detailed.csv")
-glimpse(reviews)
-```
-
 As the data is very raw and messy, we now want to do some cleaning. We remove everything that isn't normal letters. Which is special characters, numbers and etc. Furthermore we will set all letters from the comments column to lower case.
 
 To clean up the data we are using lemmatization. The purpose of this is to not only analyze the exact word strings in the reviews, as this would include several possible forms of the words used. F. ex. think and thought. Instead we want to merge all possible forms of a word into it's root word. Lemmatization try and do so, by using detailed dictionaries which the algorithm looks trough to link a given word string back to it's root word. This is a more advanced method than stemming and should be beneficial in this report.
