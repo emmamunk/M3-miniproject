@@ -163,7 +163,11 @@ As with price, we'll make the zipcodes numeric.
 ```{r}
 listings$zipcode = as.numeric(gsub('[ ]', '', listings$zipcode))
 ```
+And then we can remove NA's as we will not do more data manipulation for now. Then we can describe the variables more presicely. 
 
+```{r}
+listings = na.omit(listings)
+```
 
 
 ### Room type
@@ -190,22 +194,63 @@ Here we can see that 4707 of the rooms are entire houses or apartments, while 97
 
 ### Accommodates
 
+Accomoodates describe how many people the place is for.
 
+```{r}
+table(listings$accommodates)
+```
+
+It goes from 1 to 16, where most have 1-4 people.
 
 ### Bathrooms
 
+Bathrooms describe the number of bathrooms available.
+
+```{r}
+table(listings$bathrooms)
+```
+
+Number of bathrooms goes from 0 to 5, where most have 1 bathrooms.
+
 ### Bedrooms
+
+Bedrooms describe the number of bedrooms available.
+
+```{r}
+table(listings$bedrooms)
+```
+
+Number of bathrooms goes from 0 to 10, where most have 1 bedrooms.
 
 ### Number of reviews
 
+Number of reviews describe the number of reviews given.
+
+```{r}
+table(listings$number_of_reviews)
+```
+
+As seen the number of reviews goes from 1 to 508, where it slowly decreases from 1 and forward.
+
 ### Guest included
+
+Guest included describes number of guest included in the price.
+
+```{r}
+table(listings$guests_included)
+```
+
+Number of bathrooms goes from 1 to 16, where most have 1 guest included.
 
 ### Review scores rating
 
+Review scores rating describes a score rating going from 0 to 100, where people could rate the rented rooms/houses.
 
-And then we'll remove NA's.
+```{r}
+table(listings$review_scores_rating)
+```
 
-
+Number of bathrooms goes from 40 to 100, where 80 is the most common. 
 
 Now, we want to run a correlation matrix of the different variables to see how much the correlate.
 
@@ -213,7 +258,7 @@ Now, we want to run a correlation matrix of the different variables to see how m
 ggcorr(listings)
 ```
 
-Here, it's especially interesting to see what variables price is correlated with. Here, especially accommodates and bedrooms are highly positive correlated and zipcode and number of reviews are slightly negative correlated. And now we can run how the listings look like. Here there's 7776 observatiosna and 10 variables.
+Here, it's especially interesting to see what variables price is correlated with. Here, especially accommodates and bedrooms are highly positive correlated and zipcode and number of reviews are slightly negative correlated. And now we can run how the listings look like. Here there's 5686 observatiosna and 13 variables, where some will be removed later on, but this is simple the easiest thing for us to keep them.
 
 ```{r}
 listings
@@ -221,9 +266,11 @@ listings
 
 # Supervised machine learning
 
+We'll start by applying supervised machine learning from M1. We really want to see how well simple models perform against more complex models, and therefore it's interesting to start with the decision tree and the random forest to see how good they perform. Our benchmark is 41 percent, as that is what we get if you guess everything in class 2 or class B. 
+
 ## Training and test data set
 
-Here, we want to look at the listing and we're choosing not to look at price and id. 
+Here, we want to look at the listing and we're choosing not to look at price and id and price intrvals for nlp. 
 
 ```{r}
 listings_ml = listings %>% select(c(-price,-id, -price_intervals_nlp))
@@ -238,7 +285,7 @@ training = listings_ml[index,]
 test = listings_ml[-index,] 
 ```
 
-Here, we're using the recipes package. It lets you conveniently define a recipe of standard ML preprocessing tasks. Afterwards, we can just can use this recipe to “bake” our data, meaning performing all the steps in the recipe.
+Here, we're using the recipes package. It lets you conveniently define a recipe of standard ML preprocessing tasks. Afterwards, we can just can use this recipe to bake our data, meaning performing all the steps in the recipe.
 
 ```{r}
 reci = recipe(price_intervals ~ ., data = training) %>%
@@ -274,15 +321,15 @@ ctrl = trainControl(method = "cv",
                                      complete = TRUE),
                      search = "random" )
 
-metric <- "Accuracy" 
+metric = "Accuracy" 
 n_tune = 10 
 ```
 
-And then we can train our models. 
+And then we can train our models
 
 ## Decision tree
 
-We start with a decision tree.
+We start with a decision tree, where we're applying our trainObject().
 
 ```{r}
 fit_dt = train(x = x_train, 
@@ -292,6 +339,7 @@ fit_dt = train(x = x_train,
                 tuneLength = n_tune,
                 method = "rpart") 
 ```
+Adn then printing it for $$n_tune=$$
 
 ```{r}
 fit_dt
