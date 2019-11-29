@@ -71,16 +71,8 @@ pacman::p_load(knitr,
 And now we can download the data from the Github. We have loaded it in locally. This can be problematic, as it is harder for you to look at the data. However, I was not possibly to load it via Github.
 
 ```{r}
-listings <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/listings.csv")
-reviews <- read_csv("C:/Users/Michael Thomsen/Desktop/Stockholm/reviews_detailed.csv")
-```
-
-
-
-```{r, include=FALSE}
-listings = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb-listings/listings_detailed.csv")
-
-reviews = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb-listings/reviews_detailed.csv")
+listings <- read_csv("https://raw.githubusercontent.com/emmamunk/M3-miniproject/master/listings_detailed.csv")
+reviews <- read_csv("https://raw.githubusercontent.com/emmamunk/M3-miniproject/master/reviews_detailed.csv")
 ```
 
 After loading reviews, we had to cut it, as we had problems running some models with this much data. To get a samlpe, which wouldn't be biased, we choose the year 2015, as this year was around 10000 observations. We have to assume that this is representative for all reviews, as the models cannot run if we do it with all years. 
@@ -539,119 +531,66 @@ We see that in general that negative words aren't represented so much as the pos
 
 # A Simple Recurrent Neural Network model
 
+```{r}
+listings <- listings %>% 
+  rename(
+    listing_id = id
+  )
+```
 
 ```{r}
-listings1 <- listings %>% rename(listing_id = id)
-data <- left_join(reviews, listings1, by = "listing_id")
+data <- left_join(reviews, listings, by = "listing_id")
+```
 
+```{r}
 data <- data %>% 
-  select(comments, price_intervals_nlp, listing_id) %>%
+  select(comments, price_intervals, listing_id) %>% 
   na.omit()
-
-
-
 ```
 
 ```{r}
-index1 <- createDataPartition(y = data$price_intervals_nlp, p = 0.75, list = FALSE)
+index1 <- createDataPartition(y = data$price_intervals, p = 0.8, list = FALSE)
 
-training <- data[index1,] 
-test <- data[-index1,] 
-
-# Price intervals (y)
-training_price = training$price_intervals_nlp
-test_price = test$price_intervals_nlp
-
-# Comments intervals (x)
-training_comments = training$comments
-test_comments = test$comments
+training <- data[index1,]
+test <- data[-index1,]
 ```
 
 ```{r}
-max_features = 2000
-tokenizer = text_tokenizer(num_words = max_features,
-  filters = "!\"#$%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n",
-  lower = TRUE, split = " ", char_level = FALSE)
-```
-
-Here I update the tokenizer internal vocabulary based on tweets.
-
-```{r}
-keras::fit_text_tokenizer(tokenizer, training_comments)
-```
-
-```{r}
-tweet_tokenizer = keras::texts_to_sequences(tokenizer, training_comments)
-```
-
-And then we can look at the first six tweets and how the words now take numeric values.
-
-```{r}
-keras::fit_text_tokenizer(tokenizer, test_comments)
-```
-
-```{r}
-tweet_tokenizer2 = keras::texts_to_sequences(tokenizer, test_comments)
-```
-
-
-```{r}
-#Unnest the comments and lemmatize the words
-training_tidy <- training_comments %>% 
+training_tidy <- training %>% 
   unnest_tokens(word, comments) %>% 
   count(listing_id, word, sort = TRUE) %>% 
-  mutate(word = lemmatize_words(word))
-
-#Defining own stopwords, that isn't relevant for the analysis
-own_stopwords <- tibble(c("2","10","5","7","3","15"),
-                        lexicon = "OWN")
-#Removing theese homemade stopwords, but also cleaning for general stopwords such as the, as, a and  etc.
-training_tidy <- training_tidy %>%
+  mutate(word = lemmatize_words(word)) %>% 
+    mutate(word = word %>% str_remove_all("[^[:alnum:]]") ) %>%
+    mutate(word = word %>% str_remove_all("[^a-zA-Z]")) %>%
+  filter(str_length(word) > 1) %>% 
   anti_join(stop_words %>% bind_rows(own_stopwords), by = "word")
 
-#Removing all numbers and special characters and removing words who only contain one letter
-training_tidy <- training_tidy %>%
-  mutate(word = word %>% str_remove_all("[^[:alnum:]]") ) %>%
-    mutate(word = word %>% str_remove_all("[^a-zA-Z]")) %>%
-  filter(str_length(word) > 1)
-
-
-#Unnest the comments and lemmatize the words
-test_tidy <- test_comments %>% 
+test_tidy <- test %>% 
   unnest_tokens(word, comments) %>% 
   count(listing_id, word, sort = TRUE) %>% 
-  mutate(word = lemmatize_words(word))
-
-#Removing theese homemade stopwords, but also cleaning for general stopwords such as the, as, a and  etc.
-test_tidy <- test_tidy %>%
-  anti_join(stop_words %>% bind_rows(own_stopwords), by = "word")
-
-#Removing all numbers and special characters and removing words who only contain one letter
-test_tidy <- test_tidy %>%
-  mutate(word = word %>% str_remove_all("[^[:alnum:]]") ) %>%
+  mutate(word = lemmatize_words(word)) %>% 
+    mutate(word = word %>% str_remove_all("[^[:alnum:]]") ) %>%
     mutate(word = word %>% str_remove_all("[^a-zA-Z]")) %>%
-  filter(str_length(word) > 1)
+  filter(str_length(word) > 1) %>% 
+  anti_join(stop_words %>% bind_rows(own_stopwords), by = "word")
 ```
-
 
 ```{r}
 max_features <- 10000
-#Training
-tokenizer_training <- text_tokenizer(num_words = max_features)
+tokenizer_train <- text_tokenizer(num_words = max_features)
 
 
-tokenizer_training %>% 
+tokenizer_train %>% 
   fit_text_tokenizer(training_tidy$word)
 
-tokenizer_training$document_count
+tokenizer_train$document_count
 
 
-text_seqs_training <- texts_to_sequences(tokenizer_training, data$comments)
+text_seqs_train <- texts_to_sequences(tokenizer_train, training$comments)
 
-text_seqs_training %>%
+text_seqs_train %>% 
   head()
-
-#Testing
+#Test
 tokenizer_test <- text_tokenizer(num_words = max_features)
 
 
@@ -661,53 +600,44 @@ tokenizer_test %>%
 tokenizer_test$document_count
 
 
-text_seqs_test <- texts_to_sequences(tokenizer_test, data$comments)
+text_seqs_test <- texts_to_sequences(tokenizer_test, test$comments)
 
-text_seqs_test %>%
+text_seqs_test %>% 
   head()
+
 ```
 
 ```{r}
-x_train_nlp <- pad_sequences(tweet_tokenizer, maxlen = 100)
-x_test <- pad_sequences(tweet_tokenizer2, maxlen = 100)
-```
+maxlen = 100
 
+train_pad <- pad_sequences(text_seqs_train, maxlen = maxlen)
+test_pad <- pad_sequences(text_seqs_test, maxlen = maxlen)
 
-The last step before testing our model is to compile it, and specify what the loss and optimzer should be as what metric to track:
-# Optimizer
-We are choosing 'rmsprop' which looks back at the general direction of the changes its made previously in order to decide what the next change should be. It's particularly well suited to RNNs.
-# Loss
-Here, we're going to use "binary crossentropy", which means that we want our model to accurately reflect the probability that an observation will fall into one of two groups.
-# Metrics
-This argument is optional, but it will tell our model what, in addition to the loss, it should track while it trains. We are going to ask for accuracy so that we can look how accuracy changes as our model trains.
+dim(train_pad)
 
-```{r}
 model <- keras_model_sequential() %>%
-  layer_embedding(input_dim = 2000, output_dim = 100) %>%
-  layer_simple_rnn(units = 100, return_sequences = TRUE) %>% 
-  layer_dropout(0.2) %>%
-  layer_simple_rnn(units = 50, return_sequences = FALSE) %>%
+  layer_embedding(input_dim = 10000, output_dim = 100) %>%
+  layer_simple_rnn(units = 100) %>%
+  layer_dropout(0.5) %>% 
   layer_dense(units = 7, activation = "softmax")
 
-summary(model)
 
-model %>% compile(loss = 'sparse_categorical_crossentropy', 
-                  optimizer = 'RMSprop', 
-                  metrics = c('accuracy'))
-
+model %>% compile(
+  optimizer = "rmsprop",
+  loss = "sparse_categorical_crossentropy",
+  metrics = "accuracy"
+)
+y <- as.numeric(training$price_intervals)
 trained_model <- model %>% fit(
-    x = x_train_nlp, # sequence we're using for prediction 
-    y = training_price, # sequence we're predicting
-    batch_size = 1024, # how many samples to pass to our model at a time
+    x = train_pad, # sequence we're using for prediction 
+    y = y, # sequence we're predicting
+    batch_size = 256, # how many samples to pass to our model at a time
     epochs = 10, # how many times we'll look @ the whole dataset
-    validation_split = 0.10) # how much data to hold out for testing as we go along
+    validation_split = 0.25)
+mean(trained_model$metrics$val_accuracy)
+
 
 ```
-
-```{r}
-dim(listings_ml)
-```
-
 
 # Mixed Input Model
 
