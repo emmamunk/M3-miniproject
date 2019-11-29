@@ -1,15 +1,17 @@
 ---
 title: "M3-project"
-date: "24 nov 2019"
 output:
+  word_document:
+    toc: yes
+  pdf_document:
+    toc: yes
   html_document:
     code_folding: hide
     df_print: paged
     number_sections: yes
     toc: yes
     toc_float: yes
-  pdf_document:
-    toc: yes
+date: "24 nov 2019"
 ---
 # Introduction
 
@@ -905,7 +907,10 @@ Overall the models perform with an accuracy spanding from 36 percent to 52 perce
 
 Unfortunately the models didn't perform as well as we thought, with the Decision Tree and Random Forest beating more complex models. Other models or finetuning of layers may change the result, but unfortunately we dind't have time to test every model our tune our models further. It often looks like it's overfitting, so if we could find a solution for this, the text based and deep learning models may perform better and beat out the simpler models. 
 
-We had some problems with how the distributions are. First of all, the price intervals are not equally distrbuted with class 2 being significat bigger than 
+We had some problems with how the distributions are. First of all, the price intervals are not equally distrbuted with class 2 being significat bigger than the rest of the groups. Ideally it should be at 16,6 percent but it takes up 41 percent. If the data was more equally distributed it may perform better. Secondly, we had to only look at the year 2015 as out models could not run, because Reviews had too much data. 
+
+Other variables may also have made out model perform better. Overall, we though it would perform better, but predicting half right for six different classes is alright.
+
 
 
 
