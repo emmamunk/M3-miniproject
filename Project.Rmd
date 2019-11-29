@@ -83,7 +83,7 @@ listings = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbn
 reviews = read_csv("C:/Users/Emma/OneDrive/Universitetet/stockholm-sweden-airbnb-listings/reviews_detailed.csv")
 ```
 
-After loading reviews, we had to cut it, as we had problems running some models with this much data. To get a samlpe, which wouldn't be biased, we choose the year 2015, as this year was around 10000 observations.
+After loading reviews, we had to cut it, as we had problems running some models with this much data. To get a samlpe, which wouldn't be biased, we choose the year 2015, as this year was around 10000 observations. We have to assume that this is representative for all reviews, as the models cannot run if we do it with all years. 
 
 ```{r}
 reviews = reviews %>% mutate(year = str_detect(date, pattern = "2015")) %>% filter(year == TRUE) %>% select(c(-year))
@@ -97,8 +97,6 @@ In the variable listings, there's a lof of variables. We have choosen some of th
 ```{r}
 listings = listings %>% select(c(id, price, zipcode, room_type, accommodates, bathrooms, bedrooms, number_of_reviews, guests_included, review_scores_rating))
 ```
-
-### Id
 
 ### Airbnb price
 
@@ -156,6 +154,13 @@ listings$price_intervals_nlp[listings$price_intervals == "10"] = 6
 listings$price_intervals_nlp[listings$price_intervals == "11"] = 6
 ```
 
+And now we can remove price intervals and price.
+
+```{r}
+listings = listings %>% select(c(-price_intervals, -price))
+```
+
+
 ### Zipcode
 
 As with price, we'll make the zipcodes numeric.
@@ -172,13 +177,7 @@ listings = na.omit(listings)
 
 ### Room type
 
-There is all in all four different types of rooms, but shared rooms and hotel rooms were very small combined, so we decided only to look at entire home/apartments or private room and define the variable as a binary variable. Here entire home/apartment is equal to 1 and private room is equal to 0. 
-
-```{r}
-listings = listings %>% filter(room_type %in% c("Entire home/apt", "Private room"))
-```
-
-And now we can define the binary room type.
+There is all in all four different types of rooms, but shared rooms and hotel rooms were very small combined, so we decided only to look at entire home/apartments or private room combined with shared rooms and hotel rooms, and define the variable as a binary variable. Here entire home/apartment is equal to 1 and private room, hotel room or shared room is equal to 0. And now we can define the binary room type.
 
 ```{r}
 listings$room_type = ifelse(listings$room_type == "Entire home/apt", 1, 0)
@@ -192,6 +191,11 @@ table(listings$room_type)
 
 Here we can see that 4707 of the rooms are entire houses or apartments, while 979 are 
 
+```{r}
+listings = na.omit(listings)
+```
+
+
 ### Accommodates
 
 Accomoodates describe how many people the place is for.
@@ -200,7 +204,7 @@ Accomoodates describe how many people the place is for.
 table(listings$accommodates)
 ```
 
-It goes from 1 to 16, where most have 1-4 people.
+It goes from 1 to 16, where most have 2-4 people.
 
 ### Bathrooms
 
@@ -250,7 +254,13 @@ Review scores rating describes a score rating going from 0 to 100, where people 
 table(listings$review_scores_rating)
 ```
 
-Number of bathrooms goes from 40 to 100, where 80 is the most common. 
+Number of bathrooms goes from 40 to 100, where 100 is the most common, which is a bit odd. 
+
+### Id
+
+Here the number of identifikation numbers for the Airbnb rooms/apartments. Before any data cleaning and manipulations, there's 7854 identifation numbers. In the end there's 5742 back. 
+
+### Correlation
 
 Now, we want to run a correlation matrix of the different variables to see how much the correlate.
 
@@ -264,22 +274,23 @@ Here, it's especially interesting to see what variables price is correlated with
 listings
 ```
 
+
 # Supervised machine learning
 
 We'll start by applying supervised machine learning from M1. We really want to see how well simple models perform against more complex models, and therefore it's interesting to start with the decision tree and the random forest to see how good they perform. Our benchmark is 41 percent, as that is what we get if you guess everything in class 2 or class B. 
 
 ## Training and test data set
 
-Here, we want to look at the listing and we're choosing not to look at price and id and price intrvals for nlp. 
+Here, we want to look at the listing and we're choosing not to look at id and price intrvals for nlp. 
 
 ```{r}
-listings_ml = listings %>% select(c(-price,-id, -price_intervals_nlp))
+listings_ml = listings %>% select(c(-id, -price_intervals_nlp))
 ```
 
 We'll start by splitting the data into test and training. Here, we're doing a 75 percent split for the training data and a 25 percent split for the test data.
 
 ```{r}
-index = createDataPartition(y = listings_ml$price_intervals, p = 0.75, list = FALSE)
+index = createDataPartition(y = listings_ml$price_intervals_ml, p = 0.75, list = FALSE)
 
 training = listings_ml[index,] 
 test = listings_ml[-index,] 
@@ -288,7 +299,7 @@ test = listings_ml[-index,]
 Here, we're using the recipes package. It lets you conveniently define a recipe of standard ML preprocessing tasks. Afterwards, we can just can use this recipe to bake our data, meaning performing all the steps in the recipe.
 
 ```{r}
-reci = recipe(price_intervals ~ ., data = training) %>%
+reci = recipe(price_intervals_ml ~ ., data = training) %>%
   step_center(all_numeric(), -all_outcomes()) %>% 
   step_scale(all_numeric(), -all_outcomes()) %>% 
   step_zv(all_predictors())
@@ -299,11 +310,11 @@ reci = reci %>% prep(data = training)
 Now we just split again in predictors and outcomes, bake it all, and we are good to go.
 
 ```{r}
-x_train = bake(reci, new_data = training) %>% select(-price_intervals) 
-y_train = training %>% pull(price_intervals) %>% as.factor()
+x_train = bake(reci, new_data = training) %>% select(-price_intervals_ml) 
+y_train = training %>% pull(price_intervals_ml) %>% as.factor()
 
-x_test = bake(reci, new_data = test) %>% select(-price_intervals) 
-y_test =  test %>% pull(price_intervals) %>% as.factor()
+x_test = bake(reci, new_data = test) %>% select(-price_intervals_ml) 
+y_test =  test %>% pull(price_intervals_ml) %>% as.factor()
 ```
 
 We now define a trainControl() object.
@@ -339,13 +350,18 @@ fit_dt = train(x = x_train,
                 tuneLength = n_tune,
                 method = "rpart") 
 ```
-Adn then printing it for $$n_tune=$$
+Adn then printing it for $$n_{tune}=10$$.
 
 ```{r}
 fit_dt
 ```
 
+For $n_{tune}=10$ we can see that the accuracy is between 0.47 and 0.507, which isn't good, but is alright. Our goal is to beat 0.41. 
+
 ## Random Forest
+
+Let's now run a Random Forest.
+
 ```{r}
 fit_rf <- train(x = x_train, 
                 y = y_train, 
@@ -358,90 +374,75 @@ fit_rf <- train(x = x_train,
                 )
 ```
 
+Adn print it.
+
 ```{r}
 fit_rf
 ```
-
+Here the accuracy is between 0.477 and 0.507, which is much like the Decision Tree. 
 
 ## Evaluation of Supervised Machine Learning via final out-of-sample prediction
+
+Now we have to test how well is does on the test data. First for the Decision Tree.
 
 ```{r}
 pred_dt = predict(fit_dt, newdata = x_test)
 ```
 
+And let's print a confusion matrix.
+
 ```{r}
 confusionMatrix(pred_dt, y_test)
 ```
+
+Here the accuracy is slightly better than the training, going up to 0.526. Let's chech the Random Forest.
 
 ```{r}
 pred_rf = predict(fit_rf, newdata = x_test)
 ```
 
+Adn again print a confusion matrix.
+
 ```{r}
 confusionMatrix(pred_rf, y_test)
 ```
 
+A bit worse, bu much like the Decision Tree. 
+
 # Simple Neural Network
 
+Now we want to check how well a Simple Neural Network will do. This is the simplest neural network, you can do. 
+
 ```{r}
-fit.nnet = train(price_intervals ~ ., training, 
+fit.nnet = train(price_intervals_ml ~ ., training, 
               method='nnet', 
               trace = FALSE)
 ```
+
+Adn let's print it. 
 
 ```{r}
 fit.nnet
 ```
 
+Overall, this is really performing well.
+
+## Evaluation of Simple Neural Network via final out-of-sample prediction
+
+Let's see how well it does on the test data.
+
 ```{r}
 pred_nnet = predict(fit.nnet, newdata = x_test)
 ```
+
+Adn we'll again print a confusion matrix. 
 
 ```{r}
 confusionMatrix(pred_nnet, y_test)
 ```
 
+On the test data, it is performing slightly better, but not as good as the Random Forest or Decision Tree. 
 
-
-
-# Multi-layer Perceptron
-
-```{r}
-model = keras_model_sequential() %>%
-  layer_dense(units = 16, activation = "relu", input_shape = c("5686")) %>%
-  layer_dense(units = 6, activation = "softmax")
-```
-
-```{r}
-model %>% compile(
-  optimizer = "rmsprop",
-  loss = "categorical_crossentropy",
-  metrics = "accuracy"
-)
-```
-
-```{r}
-summary(model)
-```
-
-```{r}
-y_labels = as.numeric(y_train)
-```
-
-
-```{r}
-history = model %>% fit(
-  x_train,
-  y_labels,
-  epochs = 10,
-  batch_size = 512,
-  validation_split = 0.25
-)
-```
-
-```{r}
-y_train
-```
 
 
 
@@ -746,20 +747,112 @@ dim(listings_ml)
 
 # Mixed Input Model
 
+We wanted to experiment with a mixed input model, which is a model that draws from different data sources. Here, we're using  numeric and categorical data from listings and text data from reviews. We want to make a model that combines those two. 
+
 ```{r}
-model = keras_model_sequential() %>%
-  layer_dense(units = 16, activation = "relu", input_shape = c("5686")) %>%
-  layer_dense(units = 6, activation = "softmax")
+listings_mim = listings %>% rename(listing_id = id)
+data = left_join(reviews, listings_mim, by = "listing_id")
+
+data_mim = data %>% 
+  select(c(-listing_id, -id, -date, -reviewer_name, -reviewer_id, -price_intervals_ml)) %>%
+  na.omit()
 ```
 
 ```{r}
-listings
+index2 <- createDataPartition(y = data_mim$price_intervals_nlp, p = 0.75, list = FALSE)
+
+training <- data[index2,] 
+test <- data[-index2,] 
+
+training = na.omit(training)
+test = na.omit(test)
+
+# Price intervals (y)
+training_price = training$price_intervals_nlp
+test_price = test$price_intervals_nlp
+
+# Comments intervals (x)
+training_comments = training$comments
+test_comments = test$comments
+```
+
+```{r}
+reci_mim = recipe(price_intervals_ml ~ zipcode + room_type + accommodates + bathrooms + bedrooms + number_of_reviews + guests_included + review_scores_rating, data = training)
+
+reci_mim = reci %>% prep(data = training)
+```
+
+Now we just split again in predictors and outcomes, bake it all, and we are good to go.
+
+```{r}
+x_train = bake(reci, new_data = training) %>% select(-price_intervals_ml) 
+y_train = training %>% pull(price_intervals_ml) %>% as.factor()
+
+x_test = bake(reci, new_data = test) %>% select(-price_intervals_ml) 
+y_test =  test %>% pull(price_intervals_ml) %>% as.factor()
+```
+
+We now define a trainControl() object.
+
+```{r}
+ctrl = trainControl(method = "cv", 
+                     number = 10, 
+                     classProbs = TRUE, 
+                     savePredictions = TRUE, 
+                     summaryFunction = multiClassSummary, 
+                     verboseIter = FALSE,
+                     adaptive = list(min = 3, 
+                                     alpha = 0.05, 
+                                     method = "gls", 
+                                     complete = TRUE),
+                     search = "random" )
+
+metric = "Accuracy" 
+n_tune = 10 
+```
+
+
+```{r}
+max_features = 2000
+tokenizer = text_tokenizer(num_words = max_features,
+  filters = "!\"#$%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n",
+  lower = TRUE, split = " ", char_level = FALSE)
+```
+
+Here I update the tokenizer internal vocabulary based on tweets.
+
+```{r}
+keras::fit_text_tokenizer(tokenizer, training_comments)
+```
+
+```{r}
+tweet_tokenizer = keras::texts_to_sequences(tokenizer, training_comments)
+```
+
+And then we can look at the first six tweets and how the words now take numeric values.
+
+```{r}
+keras::fit_text_tokenizer(tokenizer, test_comments)
+```
+
+```{r}
+tweet_tokenizer2 = keras::texts_to_sequences(tokenizer, test_comments)
+```
+
+
+```{r}
+x_train_nlp = pad_sequences(tweet_tokenizer, maxlen = 100)
+x_test = pad_sequences(tweet_tokenizer2, maxlen = 100)
+```
+
+```{r}
+dim(x_train_nlp)
 ```
 
 
 ```{r}
 # Numeric and categorical model
-bi_input = layer_input(shape = c(100))
+bi_input = layer_input(shape = c(8))
 
 #bi_output = layer_input %>%
   #layer()
@@ -776,10 +869,11 @@ text_out = main_input %>%
 
 # Mix layer
 main_output = layer_concatenate(c(text_out, bi_input)) %>%  
+  layer_dropout(0.5) %>%
   layer_dense(units = 64, activation = 'relu') %>% 
   layer_dense(units = 64, activation = 'relu') %>% 
   layer_dense(units = 64, activation = 'relu') %>% 
-  layer_dropout(0.2) %>%
+  layer_dropout(0.5) %>%
   layer_dense(units = 7, activation = 'softmax')
 
 # Model
@@ -800,12 +894,7 @@ model %>% compile(loss = 'sparse_categorical_crossentropy',
 ```
 
 ```{r}
-dim(x_train)
-```
-
-
-```{r}
-x = as.matrix(x_train_nlp)
+x = as.matrix(x_train)
 ```
 
 
@@ -814,10 +903,13 @@ model %>% fit(
   x = list(x_train_nlp, x),
   y = training_price,
   epochs = 10,
-  batch_size = 64,
+  batch_size = 256,
   validation_split = 0.25
 )
 ```
+
+
+
 
 
 
