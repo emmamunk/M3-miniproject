@@ -532,6 +532,7 @@ We see that in general that negative words aren't represented so much as the pos
 
 ## A Simple Recurrent Neural Network model
 
+And now we want ot run a simple Recurrent Neural Network. 
 
 ```{r}
 listings1 <- listings %>% rename(listing_id = id)
@@ -697,9 +698,6 @@ trained_model <- model %>% fit(
 
 ```
 
-```{r}
-dim(listings_ml)
-```
 
 
 # Mixed Input Model
@@ -888,6 +886,11 @@ Adn again print a confusion matrix.
 confusionMatrix(pred_mim, y_test)
 ```
 
+# Conclusion
+
+Overall the models perform very much alike, around 45 to 55 percent accuracy for six classes. We wanted to beat 0.41, which was if you classified all in ground 2, here 500 to 1000 dollars. We're dealing with data, where it's very much not equally distibuted, which may cause a bias. If you had an even more equally distributed classes, the models may have performed differently.
+
+We're also thinkng that if you go in and tune the models, especially the NLP model and the Mixed Input Model, you may get better results. We played around with it a lot, but other models or different layers  can affect the results. 
 
 
 
